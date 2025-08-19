@@ -10,6 +10,7 @@ export default function CertificateDetail() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
+  
   useEffect(() => {
     if (!id) return;
     const token = localStorage.getItem('token');
