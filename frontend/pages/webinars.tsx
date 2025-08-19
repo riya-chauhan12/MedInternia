@@ -24,7 +24,7 @@ export default function WebinarsPage() {
   }, []);
 
   if (selectedWebinar) {
-    return <WebinarJoin meetingLink={selectedWebinar.meetingLink} />;
+    return <WebinarJoin meetingLink={selectedWebinar.meetingLink} onLeave={() => setSelectedWebinar(null)} />;
   }
 
 
@@ -35,9 +35,11 @@ export default function WebinarsPage() {
           <Typography variant="h3" fontWeight={900} color="#1565c0" sx={{ letterSpacing: 1 }}>
             Webinars
           </Typography>
-          <Button href="/webinars/create" variant="contained" color="primary" sx={{ fontWeight: 700, borderRadius: 3 }}>
-            Add Webinar
-          </Button>
+          {typeof window !== 'undefined' && ['doctor'].includes(localStorage.getItem('userType') || '') && (
+            <Button href="/webinars/create" variant="contained" color="primary" sx={{ fontWeight: 700, borderRadius: 3 }}>
+              Add Webinar
+            </Button>
+          )}
         </Box>
         <Typography variant="subtitle1" color="text.secondary" mb={3} sx={{ fontSize: "1.12rem", fontWeight: 500 }}>
           Join upcoming webinars and expand your medical expertise. Learn from top professionals and stay updated with the latest trends.
