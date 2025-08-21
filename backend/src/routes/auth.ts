@@ -1,3 +1,4 @@
+import { sendOtp, verifyOtp } from '../controllers/authController';
 import { Router } from 'express';
 import {
   register,
@@ -9,6 +10,10 @@ import {
 import { authenticate } from '../middleware/auth';
 
 const router = Router();
+
+// OTP routes
+router.post('/send-otp', sendOtp);
+router.post('/verify-otp', verifyOtp);
 
 // Public routes
 router.post('/register', register);

@@ -1,3 +1,5 @@
+import nodemailer from 'nodemailer';
+const otpStore: Record<string, string> = {};
 import { Request, Response } from 'express';
 import User, { IUser } from '../models/User';
 import { generateToken } from '../utils/jwt';
@@ -154,6 +156,44 @@ export const register = async (req: Request, res: Response) => {
       message: 'Internal server error'
     });
   }
+};
+
+export const sendOtp = async (req: Request, res: Response) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ success: false, message: 'Email required' });
+  // Generate OTP
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  otpStore[email] = otp;
+  // Send OTP via email (simple nodemailer example)
+  try {
+    const transporter = nodemailer.createTransport({
+      host: process.env.EMAIL_HOST || 'smtp.ethereal.email',
+      port: Number(process.env.EMAIL_PORT) || 587,
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+      }
+    });
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: 'MedInternia Email Verification OTP',
+      text: `Your OTP is: ${otp}`
+    });
+    return res.json({ success: true });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: 'Failed to send OTP' });
+  }
+};
+
+export const verifyOtp = (req: Request, res: Response) => {
+  const { email, otp } = req.body;
+  if (!email || !otp) return res.status(400).json({ success: false, message: 'Email and OTP required' });
+  if (otpStore[email] === otp) {
+    delete otpStore[email];
+    return res.json({ success: true });
+  }
+  return res.json({ success: false, message: 'Invalid OTP' });
 };
 
 // Login user
