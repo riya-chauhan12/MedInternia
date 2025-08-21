@@ -5,8 +5,6 @@ import {
   Typography,
   Box,
   IconButton,
-  Menu,
-  MenuItem,
   Paper,
   Divider,
   useMediaQuery,
@@ -19,18 +17,18 @@ import {
   ListItemIcon,
   ListItemText,
 } from "@mui/material";
+import Image from 'next/image';
 import NotificationsIcon from "@mui/icons-material/Notifications";
-import HomeIcon from "@mui/icons-material/Home";
-import InfoIcon from "@mui/icons-material/Info";
-import FolderOpenIcon from "@mui/icons-material/FolderOpen"; // Icon for Cases
-import WorkIcon from "@mui/icons-material/Work"; // Icon for Jobs
-import VideocamIcon from "@mui/icons-material/Videocam"; // Icon for Webinars
-import MoreHorizIcon from "@mui/icons-material/MoreHoriz"; // Icon for More
+import FolderOpenIcon from "@mui/icons-material/FolderOpen";
+import WorkIcon from "@mui/icons-material/Work";
+import VideocamIcon from "@mui/icons-material/Videocam";
 import MenuIcon from "@mui/icons-material/Menu";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import ProfileDropdown from "./ProfileDropdown";
 import SearchIcon from "@mui/icons-material/Search";
+import ArticleIcon from "@mui/icons-material/Article";
+import CloseIcon from '@mui/icons-material/Close';
 
 // Define a TypeScript interface for the NavButton props
 interface NavButtonProps {
@@ -41,12 +39,7 @@ interface NavButtonProps {
 }
 
 // Reusable component for navigation buttons
-const NavButton: React.FC<NavButtonProps> = ({
-  href,
-  icon,
-  label,
-  isActive,
-}) => {
+const NavButton: React.FC<NavButtonProps> = ({ href, icon, label, isActive }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
@@ -57,12 +50,16 @@ const NavButton: React.FC<NavButtonProps> = ({
           component={Link}
           href={href}
           sx={{
-            justifyContent: "center",
+            justifyContent: "flex-start",
+            backgroundColor: isActive ? "rgba(255, 255, 255, 0.2)" : "transparent",
             "&:hover": { backgroundColor: "rgba(255, 255, 255, 0.1)" },
+            borderRadius: theme.spacing(1),
+            mx: 1,
+            mb: 1,
           }}
         >
           <ListItemIcon sx={{ color: "white" }}>{icon}</ListItemIcon>
-          <ListItemText primary={label} sx={{ color: "white" }} />
+          <ListItemText primary={label} sx={{ color: "white", fontWeight: isActive ? 600 : 400 }} />
         </ListItemButton>
       </ListItem>
     );
@@ -78,11 +75,11 @@ const NavButton: React.FC<NavButtonProps> = ({
           mx: 0.5,
           p: 1.2,
           borderRadius: 2,
-          borderBottom: isActive ? "2px solid #fff" : "none",
-          transition: "background-color 0.3s ease-in-out",
+          backgroundColor: isActive ? "rgba(255, 255, 255, 0.2)" : "transparent",
+          color: isActive ? theme.palette.common.white : 'inherit',
+          transition: "background-color 0.3s ease-in-out, color 0.3s ease-in-out",
           "&:hover": {
             backgroundColor: "rgba(255, 255, 255, 0.15)",
-            borderBottom: isActive ? "2px solid #fff" : "none",
           },
         }}
         aria-label={label}
@@ -98,31 +95,38 @@ export default function Navbar({ route }: { route?: string }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
-  // Home icon navigation: always go to /landing
   const handleHomeNav = () => {
-    router.push("/landing");
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('token');
+      const role = localStorage.getItem('role') || '';
+      if (token) {
+        switch (role) {
+          case 'doctor':
+            router.push('/dashboard/doctor');
+            return;
+          case 'patient':
+            router.push('/dashboard/patient');
+            return;
+          case 'intern':
+            router.push('/dashboard/intern');
+            return;
+          case 'admin':
+            router.push('/dashboard/admin');
+            return;
+          default:
+            router.push('/dashboard');
+            return;
+        }
+      }
+    }
+    router.push('/');
   };
 
-  // More dropdown and mobile drawer state
-  const [moreAnchorEl, setMoreAnchorEl] = React.useState<null | HTMLElement>(
-    null
-  );
-  const moreOpen = Boolean(moreAnchorEl);
   const [drawerOpen, setDrawerOpen] = React.useState(false);
-
-  const handleMoreClick = (event: React.MouseEvent<HTMLElement>) => {
-    setMoreAnchorEl(event.currentTarget);
-  };
-
-  const handleMoreClose = () => {
-    setMoreAnchorEl(null);
-  };
-
   const toggleDrawer = (open: boolean) => () => {
     setDrawerOpen(open);
   };
 
-  // Recent searches and suggestions
   const [showSuggestions, setShowSuggestions] = React.useState(false);
   const [recentSearches, setRecentSearches] = React.useState<string[]>([
     "Cardiology",
@@ -130,9 +134,9 @@ export default function Navbar({ route }: { route?: string }) {
     "Webinar on Diabetes",
   ]);
   const [search, setSearch] = React.useState("");
+  const [isFocused, setIsFocused] = React.useState(false);
   const searchInputRef = React.useRef<HTMLInputElement>(null);
 
-  // Keyboard shortcut: focus search on '/'
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "/" && document.activeElement !== searchInputRef.current) {
@@ -144,12 +148,14 @@ export default function Navbar({ route }: { route?: string }) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
+  const showHint = !search && !isFocused;
+  
   return (
     <>
       <AppBar
         sx={{
-          background: "linear-gradient(90deg, #2193b0 0%, #6dd5ed 100%)",
-          zIndex: 1201,
+          background: "linear-gradient(90deg, #1d8299 0%, #5ac0d8 100%)",
+          zIndex: theme.zIndex.drawer + 1,
           boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
         }}
       >
@@ -165,16 +171,33 @@ export default function Navbar({ route }: { route?: string }) {
               <MenuIcon />
             </IconButton>
           )}
-          <IconButton color="inherit" sx={{ mr: 2 }} onClick={handleHomeNav}>
-            <HomeIcon />
-          </IconButton>
-          <Typography
-            variant="h6"
-            sx={{ fontWeight: 700, letterSpacing: 1, mr: 2, cursor: "pointer" }}
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              mr: 2,
+              cursor: 'pointer',
+            }}
             onClick={handleHomeNav}
           >
-            Med-Internia
-          </Typography>
+            <Image
+              src="/med-internia-logo.jpg"
+              alt="Med-Internia Logo"
+              width={32}
+              height={32}
+              style={{ marginRight: theme.spacing(1), borderRadius: '50%' }}
+            />
+            <Typography
+              variant="h6"
+              sx={{
+                fontWeight: 700,
+                letterSpacing: 1,
+                display: { xs: 'none', sm: 'block' },
+              }}
+            >
+              Med-Internia
+            </Typography>
+          </Box>
           <Box
             sx={{
               flexGrow: 1,
@@ -199,7 +222,7 @@ export default function Navbar({ route }: { route?: string }) {
                   component="form"
                   onSubmit={(e) => e.preventDefault()}
                   sx={{
-                    p: "2px 4px",
+                    p: "4px 8px",
                     display: "flex",
                     alignItems: "center",
                     width: "100%",
@@ -223,32 +246,79 @@ export default function Navbar({ route }: { route?: string }) {
                       setSearch(e.target.value);
                       setShowSuggestions(e.target.value.length > 0);
                     }}
-                    onFocus={() => setShowSuggestions(search.length > 0)}
-                    onBlur={() =>
-                      setTimeout(() => setShowSuggestions(false), 150)
-                    }
-                    placeholder="Search medical cases, jobs, or webinars…"
+                    onFocus={() => {
+                      setIsFocused(true);
+                      setShowSuggestions(true);
+                    }}
+                    onBlur={() => {
+                      setIsFocused(false);
+                      setTimeout(() => setShowSuggestions(false), 150);
+                    }}
+                    placeholder={!showHint ? "Search medical cases, jobs, or webinars…" : ""}
                     aria-label="Search medical content"
                     style={{
                       border: "none",
                       flexGrow: 1,
                       outline: "none",
-                      height: 40,
-                      fontSize: "1rem",
+                      height: 36,
+                      fontSize: "0.95rem",
                       background: "transparent",
-                      color: "#222",
+                      color: theme.palette.text.primary,
+                      minWidth: 'auto', // Ensures flex-shrink works
                     }}
                   />
-                  <IconButton
-                    type="submit"
-                    sx={{ p: "10px" }}
-                    aria-label="search"
-                  >
-                    <SearchIcon />
-                  </IconButton>
+                  {showHint && (
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        color: theme.palette.text.secondary,
+                        opacity: 0.7,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        pointerEvents: 'none',
+                        pl: 1, // Add padding to separate from the input
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      Press
+                      <Paper
+                        sx={{
+                          bgcolor: 'background.paper',
+                          border: `1px solid ${theme.palette.divider}`,
+                          borderRadius: '4px',
+                          p: '2px 4px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          boxShadow: 'none'
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontFamily: 'monospace',
+                            fontWeight: 600,
+                            lineHeight: 1,
+                            color: theme.palette.text.secondary,
+                          }}
+                        >
+                          /
+                        </span>
+                      </Paper>
+                      to search
+                    </Typography>
+                  )}
+                  {search && (
+                    <IconButton
+                      onClick={() => setSearch("")}
+                      sx={{ p: 0.5, color: theme.palette.text.secondary }}
+                      aria-label="clear search"
+                    >
+                      <CloseIcon fontSize="small" />
+                    </IconButton>
+                  )}
                 </Paper>
                 {/* Suggestions dropdown */}
-                {showSuggestions && (
+                {showSuggestions && search.length > 0 && (
                   <Paper
                     sx={{
                       position: "absolute",
@@ -263,7 +333,7 @@ export default function Navbar({ route }: { route?: string }) {
                     }}
                   >
                     <Box
-                      sx={{ mb: 1, px: 1, fontWeight: 600, color: "#1565c0" }}
+                      sx={{ mb: 1, px: 1, fontWeight: 600, color: theme.palette.primary.main }}
                     >
                       Recent Searches
                     </Box>
@@ -276,8 +346,8 @@ export default function Navbar({ route }: { route?: string }) {
                           borderRadius: 2,
                           cursor: "pointer",
                           fontSize: "0.92rem",
-                          color: "#1565c0",
-                          "&:hover": { background: "#e0eafc" },
+                          color: theme.palette.primary.dark,
+                          "&:hover": { background: theme.palette.action.hover },
                         }}
                         onMouseDown={() => {
                           setSearch(item);
@@ -287,14 +357,14 @@ export default function Navbar({ route }: { route?: string }) {
                         {item}
                       </Box>
                     ))}
-                    <Divider sx={{ my: 1 }} />
+                    <Divider sx={{ my: 1, borderColor: theme.palette.divider }} />
                     <Box
                       sx={{
                         display: "flex",
                         gap: 1,
                         px: 1,
                         fontWeight: 500,
-                        color: "#2193b0",
+                        color: theme.palette.primary.main,
                       }}
                     >
                       {["Cases", "Jobs", "Webinars"].map((item) => (
@@ -305,7 +375,7 @@ export default function Navbar({ route }: { route?: string }) {
                             px: 2,
                             py: 0.5,
                             borderRadius: 2,
-                            "&:hover": { background: "#e0eafc" },
+                            "&:hover": { background: theme.palette.action.hover },
                           }}
                           onMouseDown={() => {
                             setSearch(item);
@@ -323,7 +393,9 @@ export default function Navbar({ route }: { route?: string }) {
           </Box>
           {/* Main Nav Buttons for Desktop */}
           {!isMobile && (
-            <Box sx={{ display: "flex", alignItems: "center" }}>
+            <Box
+              sx={{ display: "flex", alignItems: "center", gap: 1 }}
+            >
               <NavButton
                 href="/cases"
                 icon={<FolderOpenIcon />}
@@ -342,60 +414,12 @@ export default function Navbar({ route }: { route?: string }) {
                 label="Webinars"
                 isActive={router.pathname === "/webinars"}
               />
-              <Tooltip title="More options" placement="bottom" arrow>
-                <IconButton
-                  color="inherit"
-                  onClick={handleMoreClick}
-                  aria-label="More options"
-                  sx={{
-                    mx: 0.5,
-                    p: 1.2,
-                    borderRadius: 2,
-                    transition: "background-color 0.3s ease-in-out",
-                    "&:hover": {
-                      backgroundColor: "rgba(255, 255, 255, 0.15)",
-                    },
-                  }}
-                >
-                  <MoreHorizIcon />
-                </IconButton>
-              </Tooltip>
-              <Menu
-                anchorEl={moreAnchorEl}
-                open={moreOpen}
-                onClose={handleMoreClose}
-                PaperProps={{
-                  sx: { minWidth: 160, borderRadius: 2, textAlign: "center" },
-                }}
-              >
-                <MenuItem
-                  onClick={() => {
-                    handleMoreClose();
-                    router.push("/resources");
-                  }}
-                  sx={{ justifyContent: "center" }}
-                >
-                  Resources
-                </MenuItem>
-                <MenuItem
-                  onClick={() => {
-                    handleMoreClose();
-                    router.push("/leaderboard");
-                  }}
-                  sx={{ justifyContent: "center" }}
-                >
-                  Leaderboard
-                </MenuItem>
-                <MenuItem
-                  onClick={() => {
-                    handleMoreClose();
-                    router.push("/badges");
-                  }}
-                  sx={{ justifyContent: "center" }}
-                >
-                  Badges
-                </MenuItem>
-              </Menu>
+              <NavButton
+                href="/research_paper"
+                icon={<ArticleIcon />}
+                label="Research Paper"
+                isActive={router.pathname === "/research_paper"}
+              />
               <Tooltip title="Notifications" placement="bottom" arrow>
                 <IconButton
                   color="inherit"
@@ -404,17 +428,6 @@ export default function Navbar({ route }: { route?: string }) {
                   aria-label="Notifications"
                 >
                   <NotificationsIcon />
-                </IconButton>
-              </Tooltip>
-              <Tooltip title="About" placement="bottom" arrow>
-                <IconButton
-                  color="inherit"
-                  component={Link}
-                  href="/about"
-                  sx={{ mx: 0.5, p: 1.2, borderRadius: 2 }}
-                  aria-label="About"
-                >
-                  <InfoIcon />
                 </IconButton>
               </Tooltip>
             </Box>
@@ -433,10 +446,11 @@ export default function Navbar({ route }: { route?: string }) {
         onClose={toggleDrawer(false)}
         PaperProps={{
           sx: {
-            background: "linear-gradient(180deg, #2193b0 0%, #6dd5ed 100%)",
+            background: "linear-gradient(180deg, #1d8299 0%, #5ac0d8 100%)",
             color: "white",
             width: 250,
-          },
+            pt: 2
+          }
         }}
       >
         <Box
@@ -445,12 +459,18 @@ export default function Navbar({ route }: { route?: string }) {
           onKeyDown={toggleDrawer(false)}
           sx={{ py: 2 }}
         >
-          <Box sx={{ display: "flex", justifyContent: "center", p: 2 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'center', p: 2, mb: 2 }}>
             <Typography variant="h6" sx={{ fontWeight: 700, letterSpacing: 1 }}>
+              <Image
+                src="/med-internia-logo.png"
+                alt="Med-Internia Logo"
+                width={32}
+                height={32}
+                style={{ marginRight: theme.spacing(1) }}
+              />
               Med-Internia
             </Typography>
           </Box>
-          <Divider sx={{ borderColor: "rgba(255,255,255,0.3)" }} />
           <List>
             <NavButton
               href="/cases"
@@ -471,22 +491,10 @@ export default function Navbar({ route }: { route?: string }) {
               isActive={router.pathname === "/webinars"}
             />
             <NavButton
-              href="/resources"
-              icon={<InfoIcon />}
-              label="Resources"
-              isActive={router.pathname === "/resources"}
-            />
-            <NavButton
-              href="/leaderboard"
-              icon={<InfoIcon />}
-              label="Leaderboard"
-              isActive={router.pathname === "/leaderboard"}
-            />
-            <NavButton
-              href="/badges"
-              icon={<InfoIcon />}
-              label="Badges"
-              isActive={router.pathname === "/badges"}
+              href="/research_paper"
+              icon={<ArticleIcon />}
+              label="Research Paper"
+              isActive={router.pathname === "/research_paper"}
             />
           </List>
         </Box>
