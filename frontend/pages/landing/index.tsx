@@ -190,7 +190,7 @@ const ProfileSidebar = () => {
           style={{
             width: "85%",
             height: "100%",
-            background: "linear-gradient(90deg, #10b981 0%, #059669 100%)",
+            background: "linear-gradient(90deg, #2193b0 0%, #6dd5ed 100%)",
             borderRadius: 4,
           }}
         ></div>
@@ -375,10 +375,11 @@ const PostForm = () => {
                   borderRadius: 20,
                   border:
                     activeTab === tab
-                      ? "2px solid #10b981"
+                      ? "2px solid #2193b0"
                       : "1px solid #e2e8f0",
-                  backgroundColor: activeTab === tab ? "#10b98120" : "#fff",
-                  color: activeTab === tab ? "#10b981" : "#64748b",
+                  background: activeTab === tab ? "linear-gradient(90deg, #2193b0 0%, #6dd5ed 100%)" : "#fff",
+                  color: activeTab === tab ? "#fff" : "#64748b",
+                  boxShadow: activeTab === tab ? "0 2px 8px #2193b044" : undefined,
                   fontSize: 14,
                   fontWeight: activeTab === tab ? 600 : 500,
                   cursor: "pointer",
@@ -477,7 +478,7 @@ const PostForm = () => {
               padding: "8px 16px",
               border: "none",
               borderRadius: 8,
-              backgroundColor: "#10b981",
+              background: "linear-gradient(90deg, #2193b0 0%, #6dd5ed 100%)",
               color: "#fff",
               fontSize: 14,
               fontWeight: 600,
@@ -1183,7 +1184,7 @@ const RecommendedConnections = () => {
                   style={{
                     width: "100%",
                     padding: "6px 12px",
-                    backgroundColor: isFollowing ? "#64748b" : "#10b981",
+                    backgroundColor: isFollowing ? "#64748b" : "#0284c7",
                     color: "white",
                     border: "none",
                     borderRadius: 6,

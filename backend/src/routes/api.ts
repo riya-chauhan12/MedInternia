@@ -1,4 +1,5 @@
 ﻿import videoRoutes from './video';
+import researchPaperRoutes from './researchPapers';
 import { Router, Request, Response } from 'express';
 import authRoutes from './auth';
 import patientRoutes from './patients';
@@ -95,5 +96,8 @@ router.use('/integration', integrationRoutes);
 
 // Enhanced features routes (leaderboard, search, etc.)
 router.use('/', enhancedRoutes);
+
+// Research paper routes
+router.use('/research-papers', researchPaperRoutes);
 
 export default router;

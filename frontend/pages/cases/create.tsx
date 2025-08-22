@@ -9,9 +9,12 @@ import {
   MenuItem,
   Card,
   CardContent,
-  CardMedia,
   Stack,
+  Grid,
+  CardMedia,
+  IconButton,
 } from "@mui/material";
+import { Close as CloseIcon } from "@mui/icons-material";
 import api from "../../utils/api";
 import { useRouter } from "next/router";
 
@@ -46,9 +49,14 @@ export default function CreateCase() {
           })
       );
       Promise.all(promises).then((base64Files) => {
-        setImages(base64Files);
+        setImages((prev) => [...prev, ...base64Files]); // append new images
       });
     }
+  };
+
+  // Remove an image by index
+  const handleRemoveImage = (index: number) => {
+    setImages((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e: any) => {
@@ -72,122 +80,204 @@ export default function CreateCase() {
       });
 
       setSuccess("Case created successfully!");
-      setForm({ title: "", description: "", difficulty: "beginner", specialization: "" });
+      setForm({
+        title: "",
+        description: "",
+        difficulty: "beginner",
+        specialization: "",
+      });
       setImages([]);
-
-      setTimeout(() => router.push("/cases"), 1500);
     } catch (err: any) {
-      setError(err.response?.data?.message || "Failed to create case");
+      setError(err?.response?.data?.message || "Failed to create case.");
     }
   };
 
+  // ✅ Return JSX here, not inside handleSubmit
   return (
-    <Container maxWidth="md">
-      <Box sx={{ my: 4 }}>
-        <Card sx={{ boxShadow: 4, borderRadius: 3, p: 2 }}>
-          <CardContent>
-            <Typography variant="h4" gutterBottom sx={{ fontWeight: "bold", mb: 2 }}>
-              🩺 Create Medical Case
-            </Typography>
+    <Box
+      sx={{
+        minHeight: "100vh",
+        background: "linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <Card
+        elevation={8}
+        sx={{
+          p: 4,
+          borderRadius: 4,
+          minWidth: 350,
+          maxWidth: 500,
+          width: "100%",
+          background: "rgba(255,255,255,0.98)",
+          boxShadow: "0 8px 32px 0 rgba(33,147,176,0.10)",
+          position: "relative",
+          overflow: "hidden",
+        }}
+      >
+        <Typography
+          variant="h4"
+          gutterBottom
+          align="center"
+          sx={{
+            fontWeight: 900,
+            color: "#1565c0",
+            letterSpacing: 1,
+            zIndex: 1,
+            position: "relative",
+          }}
+        >
+          <span
+            style={{
+              color: "#2193b0",
+              marginRight: 8,
+              fontSize: 36,
+              verticalAlign: "middle",
+            }}
+          >
+            🩺
+          </span>
+          Create Medical Case
+        </Typography>
 
-            {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-            {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
+        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
 
-            <form onSubmit={handleSubmit}>
-              <Stack spacing={2}>
-                <TextField
-                  label="Title"
-                  name="title"
-                  fullWidth
-                  value={form.title}
-                  onChange={handleChange}
-                  required
+        <form onSubmit={handleSubmit} style={{ zIndex: 1, position: "relative" }}>
+          <TextField
+            label="Title *"
+            name="title"
+            value={form.title}
+            onChange={handleChange}
+            fullWidth
+            margin="normal"
+            required
+            sx={{ bgcolor: "#f8fafd", borderRadius: 2 }}
+          />
+          <TextField
+            label="Description *"
+            name="description"
+            value={form.description}
+            onChange={handleChange}
+            fullWidth
+            margin="normal"
+            required
+            multiline
+            minRows={4}
+            sx={{ bgcolor: "#f8fafd", borderRadius: 2 }}
+          />
+          <TextField
+            label="Specialization *"
+            name="specialization"
+            value={form.specialization}
+            onChange={handleChange}
+            fullWidth
+            margin="normal"
+            required
+            sx={{ bgcolor: "#f8fafd", borderRadius: 2 }}
+          />
+          <TextField
+            label="Difficulty *"
+            name="difficulty"
+            value={form.difficulty}
+            onChange={handleChange}
+            fullWidth
+            margin="normal"
+            required
+            select
+            sx={{ bgcolor: "#f8fafd", borderRadius: 2 }}
+          >
+            <MenuItem value="beginner">Beginner</MenuItem>
+            <MenuItem value="intermediate">Intermediate</MenuItem>
+            <MenuItem value="complex">Complex</MenuItem>
+          </TextField>
+
+          <Button
+            variant="outlined"
+            component="label"
+            fullWidth
+            sx={{
+              mt: 2,
+              mb: 2,
+              fontWeight: 700,
+              color: "#2193b0",
+              borderColor: "#2193b0",
+              borderRadius: 2,
+              background: "#f8fafd",
+              "&:hover": { background: "#e3f2fd" },
+            }}
+          >
+            UPLOAD CASE IMAGE(S)
+            <input
+              type="file"
+              hidden
+              multiple
+              accept="image/*"
+              onChange={handleImageChange}
+            />
+          </Button>
+
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, mb: 2 }}>
+            {images.map((img, idx) => (
+              <Card
+                key={idx}
+                sx={{
+                  width: 90,
+                  height: 90,
+                  borderRadius: 2,
+                  overflow: "hidden",
+                  boxShadow: 1,
+                  position: "relative",
+                }}
+              >
+                <CardMedia
+                  component="img"
+                  image={img}
+                  alt={`Case image ${idx + 1}`}
+                  sx={{ width: "100%", height: "100%", objectFit: "cover" }}
                 />
-                <TextField
-                  label="Description"
-                  name="description"
-                  fullWidth
-                  multiline
-                  rows={4}
-                  value={form.description}
-                  onChange={handleChange}
-                  required
-                />
-                <TextField
-                  label="Specialization"
-                  name="specialization"
-                  fullWidth
-                  value={form.specialization}
-                  onChange={handleChange}
-                  required
-                />
-                <TextField
-                  select
-                  label="Difficulty"
-                  name="difficulty"
-                  fullWidth
-                  value={form.difficulty}
-                  onChange={handleChange}
-                  required
+                <IconButton
+                  size="small"
+                  sx={{
+                    position: "absolute",
+                    top: 2,
+                    right: 2,
+                    bgcolor: "rgba(255,255,255,0.7)",
+                  }}
+                  onClick={() => handleRemoveImage(idx)}
                 >
-                  <MenuItem value="beginner">Beginner</MenuItem>
-                  <MenuItem value="intermediate">Intermediate</MenuItem>
-                  <MenuItem value="advanced">Advanced</MenuItem>
-                </TextField>
+                  <CloseIcon fontSize="small" />
+                </IconButton>
+              </Card>
+            ))}
+          </Box>
 
-                {/* Image Upload */}
-                <Box>
-                  <Button
-                    variant="outlined"
-                    component="label"
-                    fullWidth
-                    sx={{ py: 1.5 }}
-                  >
-                    {images.length > 0 ? "Change Images" : "Upload Case Image(s)"}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      hidden
-                      multiple
-                      onChange={handleImageChange}
-                    />
-                  </Button>
-
-                  {/* Preview Uploaded Images */}
-                  {images.length > 0 && (
-                    <Stack direction="row" spacing={2} sx={{ mt: 2, flexWrap: "wrap" }}>
-                      {images.map((img, idx) => (
-                        <CardMedia
-                          key={idx}
-                          component="img"
-                          image={img}
-                          alt={`Preview ${idx}`}
-                          sx={{
-                            width: 150,
-                            height: 150,
-                            objectFit: "cover",
-                            borderRadius: 2,
-                            boxShadow: 2,
-                          }}
-                        />
-                      ))}
-                    </Stack>
-                  )}
-                </Box>
-
-                <Button
-                  type="submit"
-                  variant="contained"
-                  color="primary"
-                  sx={{ mt: 2, py: 1.5, fontSize: "16px", fontWeight: "bold" }}
-                >
-                  🚀 Create Case
-                </Button>
-              </Stack>
-            </form>
-          </CardContent>
-        </Card>
-      </Box>
-    </Container>
+          <Button
+            type="submit"
+            variant="contained"
+            fullWidth
+            sx={{
+              mt: 2,
+              py: 1.3,
+              fontWeight: 700,
+              fontSize: "1.1rem",
+              borderRadius: 3,
+              boxShadow: "0 4px 20px 0 rgba(31, 38, 135, 0.10)",
+              background: "linear-gradient(90deg, #2193b0 0%, #6dd5ed 100%)",
+              textTransform: "none",
+              letterSpacing: 1,
+              "&:hover": {
+                background: "linear-gradient(90deg, #6dd5ed 0%, #2193b0 100%)",
+              },
+            }}
+          >
+            🚀 CREATE CASE
+          </Button>
+        </form>
+      </Card>
+    </Box>
   );
 }
+

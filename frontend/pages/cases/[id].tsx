@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { Container, Typography, Box, CircularProgress, Alert, Button, TextField, IconButton, Stack, Collapse } from '@mui/material';
+import { Container, Typography, Box, CircularProgress, Alert, Button, TextField, IconButton, Stack, Collapse, Tooltip } from '@mui/material';
 import { MessageCircleReply, Pin } from 'lucide-react';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import PushPinIcon from '@mui/icons-material/PushPin';
@@ -213,9 +213,26 @@ export default function CaseDiscussion({ id: propId, modalMode, hideDescription 
                           </IconButton>
                           {/* Three dots menu for pin/unpin */}
                           {isAuthor && (
-                            <IconButton size="small" sx={{ ml: 1, p: 0.5 }} onClick={e => { setAnchorEl(e.currentTarget); setSelectedComment(c); }}>
-                              <MoreVertIcon sx={{ fontSize: 22, color: '#888', transition: 'color 0.2s', '&:hover': { color: '#1976d2' } }} />
-                            </IconButton>
+                            <Tooltip title="More options">
+                              <IconButton
+                                size="small"
+                                sx={{
+                                  ml: 1,
+                                  p: 0.5,
+                                  color: '#2193b0',
+                                  borderRadius: 2,
+                                  transition: 'background 0.2s, color 0.2s',
+                                  '&:hover': {
+                                    background: '#e3f2fd',
+                                    color: '#1976d2',
+                                  },
+                                  boxShadow: '0 2px 8px #2193b022',
+                                }}
+                                onClick={e => { setAnchorEl(e.currentTarget); setSelectedComment(c); }}
+                              >
+                                <MoreVertIcon sx={{ fontSize: 24 }} />
+                              </IconButton>
+                            </Tooltip>
                           )}
                           {/* Pin/unpin option in menu */}
                           {anchorEl && selectedComment?._id === c._id && (

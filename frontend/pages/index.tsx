@@ -108,7 +108,7 @@ const HomePage = () => {
               background: "linear-gradient(90deg, #2193b0 0%, #1de9b6 100%)",
             },
           }}
-          href="/auth/register"
+          href="/auth/login"
         >
           Get Started
         </Button>
