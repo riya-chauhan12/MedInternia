@@ -298,18 +298,21 @@ export default function EditProfilePage() {
     setForm({ ...form, role });
   };
 
-  // Handles the change in profile picture from file input
+  // Handles the change in profile picture from file input (store file in state, don't upload yet)
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
   const handleImageChange = (event: ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
+      const file = event.target.files[0];
+      setSelectedImageFile(file);
       const reader = new FileReader();
       reader.onload = (e) => {
         if (e.target?.result) {
           setForm({ ...form, image: e.target.result as string });
-          setHasCustomImage(true); // A custom image has been uploaded
+          setHasCustomImage(true);
         }
       };
-      reader.readAsDataURL(event.target.files[0]);
-      setOpenImageMenu(false); // Close the menu after selecting
+      reader.readAsDataURL(file);
+      setOpenImageMenu(false);
     }
   };
 
@@ -320,7 +323,7 @@ export default function EditProfilePage() {
     setOpenImageMenu(false); // Close the menu after removing
   };
 
-  // Handles form submission, with validation and a simulated API call
+  // Handles form submission, uploads image if selected, then updates profile
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setMessage("");
@@ -336,6 +339,28 @@ export default function EditProfilePage() {
       const token = localStorage.getItem('token');
       const userId = localStorage.getItem('userId');
       if (!token || !userId) throw new Error('Missing auth');
+      let profilePictureUrl = (typeof form.image === 'string' && /^https?:\/\//.test(form.image)) ? form.image : '';
+      // If a new image file is selected, upload it first
+      if (selectedImageFile) {
+        const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000/api';
+        const formData = new FormData();
+        formData.append('profilePicture', selectedImageFile);
+        const resImg = await fetch(`${API_BASE_URL}/auth/profile/upload-picture`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: formData
+        });
+        const dataImg = await resImg.json();
+        if (dataImg.success && dataImg.data && dataImg.data.user && dataImg.data.user.profilePicture) {
+          profilePictureUrl = dataImg.data.user.profilePicture;
+        } else {
+          setMessage(dataImg.message || 'Failed to upload image.');
+          setLoading(false);
+          return;
+        }
+      }
       // Prepare payload for backend
       const payload = {
         firstName: form.name.split(' ')[0] || '',
@@ -348,7 +373,7 @@ export default function EditProfilePage() {
           state: form.address.state,
           zipCode: form.address.zip,
         },
-  profilePicture: (typeof form.image === 'string' && /^https?:\/\//.test(form.image)) ? form.image : '',
+        profilePicture: profilePictureUrl,
         medicalSchool: form.medicalSchool,
         yearOfStudy: form.graduationYear ? Number(form.graduationYear) : undefined,
         interests: Array.isArray(form.specialtiesOfInterest)
@@ -376,6 +401,7 @@ export default function EditProfilePage() {
         setMessage("Profile updated successfully!");
         setIsSaved(true);
         setTimeout(() => setIsSaved(false), 3000);
+        setSelectedImageFile(null); // Clear selected image after save
       } else {
         setMessage(data.message || "Failed to update profile.");
       }

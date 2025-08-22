@@ -106,27 +106,42 @@ const ProfileSidebar = () => {
           marginBottom: 16,
         }}
       >
-        <div
-          style={{
-            width: 80,
-            height: 80,
-            borderRadius: "50%",
-            backgroundColor: "#e0f2fe",
-            border: "4px solid white",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: 24,
-            fontWeight: "bold",
-            color: "#0284c7",
-          }}
-        >
-          {user
-            ? user.userType === 'doctor'
-              ? `${user.firstName?.toUpperCase()[0] ?? ''}${user.lastName?.toUpperCase()[0] ?? ''}`
-              : `${user.firstName?.toUpperCase()[0] ?? ''}${user.lastName?.toUpperCase()[0] ?? ''}`
-            : ''}
-        </div>
+        {user && user.profilePicture ? (
+          <img
+            src={user.profilePicture}
+            alt="Profile"
+            style={{
+              width: 80,
+              height: 80,
+              borderRadius: "50%",
+              border: "4px solid white",
+              objectFit: "cover",
+              backgroundColor: "#e0f2fe"
+            }}
+          />
+        ) : (
+          <div
+            style={{
+              width: 80,
+              height: 80,
+              borderRadius: "50%",
+              backgroundColor: "#e0f2fe",
+              border: "4px solid white",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 24,
+              fontWeight: "bold",
+              color: "#0284c7",
+            }}
+          >
+            {user
+              ? user.userType === 'doctor'
+                ? `${user.firstName?.toUpperCase()[0] ?? ''}${user.lastName?.toUpperCase()[0] ?? ''}`
+                : `${user.firstName?.toUpperCase()[0] ?? ''}${user.lastName?.toUpperCase()[0] ?? ''}`
+              : ''}
+          </div>
+        )}
       </div>
       <div style={{ textAlign: "center", marginBottom: 20 }}>
         <h2
@@ -1099,6 +1114,7 @@ type Doctor = {
   medicalHistory?: string[];
   allergies?: string[];
   mentorDoctor?: string;
+  profilePicture?: string;
 };
 
 const RecommendedConnections = () => {

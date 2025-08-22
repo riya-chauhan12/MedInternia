@@ -147,7 +147,7 @@ export default function CreateCase() {
 
         <form onSubmit={handleSubmit} style={{ zIndex: 1, position: "relative" }}>
           <TextField
-            label="Title *"
+            label="Title"
             name="title"
             value={form.title}
             onChange={handleChange}
@@ -157,7 +157,7 @@ export default function CreateCase() {
             sx={{ bgcolor: "#f8fafd", borderRadius: 2 }}
           />
           <TextField
-            label="Description *"
+            label="Description"
             name="description"
             value={form.description}
             onChange={handleChange}
@@ -169,7 +169,7 @@ export default function CreateCase() {
             sx={{ bgcolor: "#f8fafd", borderRadius: 2 }}
           />
           <TextField
-            label="Specialization *"
+            label="Specialization"
             name="specialization"
             value={form.specialization}
             onChange={handleChange}
@@ -179,7 +179,7 @@ export default function CreateCase() {
             sx={{ bgcolor: "#f8fafd", borderRadius: 2 }}
           />
           <TextField
-            label="Difficulty *"
+            label="Difficulty"
             name="difficulty"
             value={form.difficulty}
             onChange={handleChange}
@@ -214,7 +214,7 @@ export default function CreateCase() {
               type="file"
               hidden
               multiple
-              accept="image/*"
+              accept="image/"
               onChange={handleImageChange}
             />
           </Button>

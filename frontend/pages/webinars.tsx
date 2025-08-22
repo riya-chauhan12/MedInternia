@@ -8,20 +8,34 @@ import {
   ListItemText,
   Button,
   Chip,
+  IconButton,
 } from "@mui/material";
+import AddIcon from '@mui/icons-material/Add';
     import api from '../utils/api';
 import WebinarJoin from "../components/WebinarJoin";
 
 export default function WebinarsPage() {
   const [webinars, setWebinars] = useState<any[]>([]);
   const [selectedWebinar, setSelectedWebinar] = useState<any>(null);
+  const [isDoctor, setIsDoctor] = useState(false);
 
 
     useEffect(() => {
       api.get('/webinars')
         .then(res => setWebinars(res.data.data.webinars || []))
         .catch(() => setWebinars([]));
-  }, []);
+
+      // Fetch user profile to check if doctor
+      api.get('/auth/profile')
+        .then(res => {
+          if (res.data?.data?.user?.userType === 'doctor') {
+            setIsDoctor(true);
+          } else {
+            setIsDoctor(false);
+          }
+        })
+        .catch(() => setIsDoctor(false));
+    }, []);
 
   if (selectedWebinar) {
     return <WebinarJoin meetingLink={selectedWebinar.meetingLink} onLeave={() => setSelectedWebinar(null)} />;
@@ -29,16 +43,21 @@ export default function WebinarsPage() {
 
 
   return (
-    <Box maxWidth={700} mx="auto" my={4} sx={{ minHeight: "80vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+  <Box maxWidth={700} mx="auto" my={4} sx={{ minHeight: "80vh", display: "flex", alignItems: "center", justifyContent: "center", mt: 10 }}>
       <Card sx={{ p: 4, borderRadius: 4, boxShadow: "0 2px 12px #2193b022", background: "linear-gradient(120deg, #f8f9fa 0%, #e0eafc 100%)", width: "100%" }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Typography variant="h3" fontWeight={900} color="#1565c0" sx={{ letterSpacing: 1 }}>
             Webinars
           </Typography>
-          {typeof window !== 'undefined' && ['doctor'].includes(localStorage.getItem('userType') || '') && (
-            <Button href="/webinars/create" variant="contained" color="primary" sx={{ fontWeight: 700, borderRadius: 3 }}>
-              Add Webinar
-            </Button>
+          {isDoctor && (
+            <IconButton
+              onClick={() => window.location.href = '/webinars/create'}
+              color="primary"
+              sx={{ bgcolor: "#e3f2fd", borderRadius: 2 }}
+              aria-label="Add Webinar"
+            >
+              <AddIcon sx={{ fontSize: 32 }} />
+            </IconButton>
           )}
         </Box>
         <Typography variant="subtitle1" color="text.secondary" mb={3} sx={{ fontSize: "1.12rem", fontWeight: 500 }}>
