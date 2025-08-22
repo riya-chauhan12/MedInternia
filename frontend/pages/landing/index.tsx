@@ -1105,6 +1105,7 @@ const RecommendedConnections = () => {
   const [following, setFollowing] = React.useState<string[]>([]);
   const [doctors, setDoctors] = React.useState<Doctor[]>([]);
   React.useEffect(() => {
+    
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
     import('../../utils/api').then(apiModule => {
       apiModule.default.get('/users/leaderboard?userType=doctor&limit=10')
