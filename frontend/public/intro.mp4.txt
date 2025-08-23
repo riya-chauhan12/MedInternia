@@ -1,0 +1,2 @@
+// Place your video file (e.g., intro.mp4) in the frontend/public directory.
+// This is a placeholder file to remind you to add your video.

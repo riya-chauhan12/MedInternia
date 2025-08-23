@@ -61,34 +61,38 @@ const HomePage = () => {
       {/* Hero Section with medical-themed background, search bar, improved typography, and CTA */}
       <Box
         sx={{
-          maxWidth: 900,
-          mx: "auto",
-          pt: { xs: 2, md: 4 }, // reduce top padding
+          maxWidth: '100vw',
+          mx: 0,
+          pt: { xs: 2, md: 4 },
           pb: 2,
           mb: { xs: 2, md: 3 },
-          textAlign: "center",
           position: "relative",
           zIndex: 1,
+          display: 'flex',
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
         }}
       >
-        <Box/>
-        <Typography
-          variant="h1"
-          fontWeight={900}
-          color="#2193b0"
-          mb={2}
-          sx={{ letterSpacing: 1, fontSize: { xs: "2.5rem", md: "3.5rem" } }}
-        >
-          Med-Internia
-        </Typography>
-        <Typography
-          variant="h6"
-          color="#555"
-          mb={4}
-          sx={{ fontWeight: 400, fontSize: { xs: "1.1rem", md: "1.3rem" } }}
-        >
-          Your gateway to medical learning, jobs, and opportunities.
-        </Typography>
+        <Box sx={{ textAlign: 'left' }}>
+          <Typography
+            variant="h1"
+            fontWeight={900}
+            color="#2193b0"
+            mb={2}
+            sx={{ letterSpacing: 1, fontSize: { xs: "3.5rem", md: "5rem" }, textAlign: 'center' }}
+          >
+            MedInternia
+          </Typography>
+          <Typography
+            variant="h5"
+            color="#555"
+            mb={4}
+            sx={{ fontWeight: 500, fontSize: { xs: "1.7rem", md: "2.2rem" }, textAlign: 'center' }}
+          >
+            Your gateway to medical learning, jobs, and opportunities.
+          </Typography>
+        </Box>
         <Button
           variant="contained"
           size="large"
@@ -101,11 +105,15 @@ const HomePage = () => {
             background: "linear-gradient(90deg, #1de9b6 0%, #2193b0 100%)",
             boxShadow: "0 4px 24px #2193b044",
             transition: "transform 0.2s",
-            mb: 2,
-            "&:hover": {
-              transform: "scale(1.07)",
-              boxShadow: "0 8px 32px #2193b066",
-              background: "linear-gradient(90deg, #2193b0 0%, #1de9b6 100%)",
+            position: 'absolute',
+            right: { xs: 16, md: 64 },
+            top: { xs: 32, md: 64 },
+            whiteSpace: 'nowrap',
+            minWidth: '180px',
+            '&:hover': {
+              transform: 'scale(1.07)',
+              boxShadow: '0 8px 32px #2193b066',
+              background: 'linear-gradient(90deg, #2193b0 0%, #1de9b6 100%)',
             },
           }}
           href="/auth/login"
@@ -113,6 +121,13 @@ const HomePage = () => {
           Get Started
         </Button>
       </Box>
+      {/* Local video player below Hero section */}
+      <Box sx={{ mt: 2, mb: 4, display: 'flex', justifyContent: 'center' }}>
+        <video width="900" height="500" autoPlay loop muted playsInline style={{ borderRadius: 24, boxShadow: '0 8px 32px #2193b066', maxWidth: '100%' }}>
+          <source src="/anushka_video.mp4" type="video/mp4" />
+          Your browser does not support the video tag.
+        </video>
+  </Box>
       {/* 4 Main Cards Section (Cases, Jobs, Webinars, Leaderboard) */}
       <Box
         sx={{
@@ -303,7 +318,7 @@ const HomePage = () => {
             <img src="/qr-blue-spies.png" alt="Team Blue Spies QR" width={140} height={140} style={{ display: 'block', margin: '0 auto' }} />
           </div>
             <Typography variant="h6" color="#2193b0" fontWeight={700} mb={1}>
-              Med-Internia App on Mobile
+              MedInternia App on Mobile
             </Typography>
           <Typography variant="body2" color="#888">
             Scan to Download
