@@ -192,7 +192,7 @@ export default function ResearchPaperUpload() {
           {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
           <form onSubmit={handleSubmit} style={{ zIndex: 1, position: 'relative' }}>
             <TextField
-              label="Title *"
+              label="Title"
               name="title"
               value={form.title}
               onChange={handleChange}
@@ -202,7 +202,7 @@ export default function ResearchPaperUpload() {
               sx={{ bgcolor: '#f8fafd', borderRadius: 2 }}
             />
             <TextField
-              label="Description *"
+              label="Description"
               name="description"
               value={form.description}
               onChange={handleChange}
@@ -214,7 +214,7 @@ export default function ResearchPaperUpload() {
               sx={{ bgcolor: '#f8fafd', borderRadius: 2 }}
             />
             <TextField
-              label="Field *"
+              label="Field"
               name="field"
               value={form.field}
               onChange={handleChange}
@@ -224,7 +224,7 @@ export default function ResearchPaperUpload() {
               sx={{ bgcolor: '#f8fafd', borderRadius: 2 }}
             />
             <TextField
-              label="Difficulty *"
+              label="Difficulty"
               name="difficulty"
               value={form.difficulty}
               onChange={handleChange}

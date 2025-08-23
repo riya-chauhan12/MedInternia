@@ -72,7 +72,13 @@ export default function ConnectionsPage() {
                 )
               }
             >
-              <Avatar src={f.profilePicture || "/profile-icon.png"} sx={{ mr: 2 }} />
+              <Avatar src={f.profilePicture ? f.profilePicture : undefined} sx={{ mr: 2 }}>
+                {!f.profilePicture && (
+                  <span style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#2196f3', color: '#fff', borderRadius: '50%' }}>
+                    {`${(f.firstName?.[0] || "").toUpperCase()}${(f.lastName?.[0] || "").toUpperCase()}`}
+                  </span>
+                )}
+              </Avatar>
               <ListItemText
                 primary={`${f.firstName} ${f.lastName}`}
                 secondary={f.specialization || f.userType}

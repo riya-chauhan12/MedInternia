@@ -1115,6 +1115,7 @@ type Doctor = {
   allergies?: string[];
   mentorDoctor?: string;
   profilePicture?: string;
+  createdAt?: string;
 };
 
 const RecommendedConnections = () => {
@@ -1126,7 +1127,15 @@ const RecommendedConnections = () => {
     import('../../utils/api').then(apiModule => {
       apiModule.default.get('/users/leaderboard?userType=doctor&limit=10')
         .then(res => {
-          setDoctors(res.data.data.leaderboard || []);
+          let leaderboard = res.data.data.leaderboard || [];
+          leaderboard.sort((a: Doctor, b: Doctor) => {
+            if (a.createdAt && b.createdAt) {
+              return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+            }
+            return 0;
+          });
+          leaderboard = leaderboard.reverse();
+          setDoctors(leaderboard);
         });
       if (token) {
         apiModule.default.get('/users/connections', {
@@ -1156,141 +1165,141 @@ const RecommendedConnections = () => {
     setFollowing((prev) => prev.filter((id) => id !== doctorId));
   };
   return (
-    <div
-      style={{
-        backgroundColor: "#fff",
-        borderRadius: 16,
-        padding: 24,
-        boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
-        border: "1px solid #f0f4f8",
-        marginBottom: 24,
-        boxSizing: "border-box",
-        width: "100%",
-        minWidth: 0,
-      }}
-    >
-      <h3
-        style={{
-          fontSize: 18,
-          fontWeight: 700,
-          color: "#1e293b",
-          marginBottom: 20,
-        }}
-      >
-        Recommended Connections
-      </h3>
       <div
         style={{
-          display: "flex",
-          overflowX: "auto",
-          gap: 16,
-          paddingBottom: 8,
-          scrollbarWidth: "thin",
-          scrollbarColor: "#e0e8f0 #fff",
+          backgroundColor: "#fff",
+          borderRadius: 16,
+          padding: 24,
+          boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+          border: "1px solid #f0f4f8",
+          marginBottom: 24,
+          boxSizing: "border-box",
+          width: "100%",
+          minWidth: 0,
         }}
       >
-        {doctors.slice(0, 5).map((doctor, idx) => {
-          const isFollowing = following.includes(doctor._id);
-          return (
-            <div key={doctor._id} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-              <div
-                style={{
-                  minWidth: 180,
-                  maxWidth: 220,
-                  backgroundColor: "#fafbfc",
-                  border: "1px solid #f1f5f9",
-                  borderRadius: 12,
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-                  padding: "16px 12px",
-                  textAlign: "center",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  gap: 8,
-                }}
-              >
+        <h3
+          style={{
+            fontSize: 18,
+            fontWeight: 700,
+            color: "#1e293b",
+            marginBottom: 20,
+          }}
+        >
+          Recommended Connections
+        </h3>
+        <div
+          style={{
+            display: "flex",
+            overflowX: "auto",
+            gap: 16,
+            paddingBottom: 8,
+            scrollbarWidth: "thin",
+            scrollbarColor: "#e0e8f0 #fff",
+            alignItems: "flex-start"
+          }}
+        >
+          {doctors.slice(0, 5).map((doctor, idx) => {
+            const isFollowing = following.includes(doctor._id);
+            return (
+              <div key={doctor._id} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                 <div
                   style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: "50%",
-                    backgroundColor: "#e0f2fe",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: 18,
-                    fontWeight: "bold",
-                    color: "#0284c7",
-                    marginBottom: 8,
-                  }}
-                >
-                  {doctor.firstName && doctor.lastName
-                    ? `${doctor.firstName[0]}${doctor.lastName[0]}`
-                    : doctor.firstName || doctor.lastName || "DR"}
-                </div>
-                <h4
-                  style={{
-                    fontSize: 14,
-                    fontWeight: 600,
-                    color: "#1e293b",
-                    margin: "0 0 2px 0",
-                  }}
-                >
-                  Dr. {doctor.firstName} {doctor.lastName}
-                </h4>
-                <p style={{ fontSize: 12, color: "#64748b", margin: 0 }}>
-                  {doctor.specialization}
-                </p>
-                <button
-                  style={{
-                    width: "100%",
-                    padding: "6px 12px",
-                    backgroundColor: isFollowing ? "#64748b" : "#0284c7",
-                    color: "white",
-                    border: "none",
-                    borderRadius: 6,
-                    fontSize: 12,
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    marginTop: 8,
-                  }}
-                  onClick={async () => {
-                    if (isFollowing) {
-                      await handleUnfollow(doctor._id);
-                    } else {
-                      await handleFollow(doctor._id);
-                    }
-                  }}
-                >
-                  {isFollowing ? "Connected" : "Connect"}
-                </button>
-              </div>
-              {idx === 4 && (
-                <button
-                  style={{
-                    minWidth: 100,
-                    height: 48,
-                    alignSelf: "center",
-                    background: "#e0e8f0",
-                    color: "#1e293b",
-                    border: "none",
-                    borderRadius: 8,
-                    fontWeight: 600,
-                    fontSize: 14,
-                    cursor: "pointer",
-                    marginLeft: 8,
+                    minWidth: 180,
+                    maxWidth: 220,
+                    backgroundColor: "#fafbfc",
+                    border: "1px solid #f1f5f9",
+                    borderRadius: 12,
                     boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+                    padding: "16px 12px",
+                    textAlign: "center",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: 8,
                   }}
-                  title="Show more connections"
                 >
-                  More →
-                </button>
-              )}
-            </div>
-          );
-        })}
+                  <div
+                    style={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: "50%",
+                      backgroundColor: "#e0f2fe",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 18,
+                      fontWeight: "bold",
+                      color: "#0284c7",
+                      marginBottom: 8,
+                    }}
+                  >
+                    {doctor.firstName && doctor.lastName
+                      ? `${doctor.firstName[0]}${doctor.lastName[0]}`
+                      : doctor.firstName || doctor.lastName || "DR"}
+                  </div>
+                  <h4
+                    style={{
+                      fontSize: 14,
+                      fontWeight: 600,
+                      color: "#1e293b",
+                      margin: "0 0 2px 0",
+                    }}
+                  >
+                    Dr. {doctor.firstName} {doctor.lastName}
+                  </h4>
+                  <p style={{ fontSize: 12, color: "#64748b", margin: 0 }}>
+                    {doctor.specialization}
+                  </p>
+                  <button
+                    style={{
+                      width: "100%",
+                      padding: "6px 12px",
+                      backgroundColor: isFollowing ? "#64748b" : "#0284c7",
+                      color: "white",
+                      border: "none",
+                      borderRadius: 6,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      marginTop: 8,
+                    }}
+                    onClick={async () => {
+                      if (isFollowing) {
+                        await handleUnfollow(doctor._id);
+                      } else {
+                        await handleFollow(doctor._id);
+                      }
+                    }}
+                  >
+                    {isFollowing ? "Connected" : "Connect"}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+          {/* More button after the last card, horizontally aligned */}
+          <button
+            style={{
+              minWidth: 100,
+              height: 48,
+              alignSelf: "center",
+              background: "#e0e8f0",
+              color: "#1e293b",
+              border: "none",
+              borderRadius: 8,
+              fontWeight: 600,
+              fontSize: 14,
+              cursor: "pointer",
+              marginLeft: 8,
+              boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+            }}
+            title="Show more connections"
+          >
+            More →
+          </button>
+        </div>
       </div>
-    </div>
   );
 };
 
