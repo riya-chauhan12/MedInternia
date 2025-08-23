@@ -9,6 +9,7 @@ export default function Patients() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    
     const token = localStorage.getItem('token');
     api.get('/patients', {
       headers: { Authorization: `Bearer ${token}` }
