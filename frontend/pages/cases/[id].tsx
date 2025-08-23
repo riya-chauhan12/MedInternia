@@ -169,7 +169,7 @@ export default function CaseDiscussion({ id: propId, modalMode, hideDescription 
         </>}
           {pinned.length > 0 && (
             <Box sx={{ mb: 3, p: 2, bgcolor: '#fffbe6', borderRadius: 3, boxShadow: '0 2px 12px #ffd70022', border: '1.5px solid #ffe066' }}>
-              <Typography variant="h6" sx={{ mb: 2, color: '#FFD700', fontWeight: 700 }}>Pinned Comments</Typography>
+              <Typography variant="h6" sx={{ mb: 2, color: '#FFD700', fontWeight: 700 }}>Keypoints</Typography>
               {pinned
                 .filter((c) => !c.replyTo)
                 .map((c, idx) => {

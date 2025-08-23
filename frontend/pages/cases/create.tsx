@@ -23,7 +23,7 @@ export default function CreateCase() {
     title: "",
     description: "",
     difficulty: "beginner",
-    specialization: "",
+    Category: "",
   });
 
   const [images, setImages] = useState<string[]>([]);
@@ -84,7 +84,7 @@ export default function CreateCase() {
         title: "",
         description: "",
         difficulty: "beginner",
-        specialization: "",
+        Category: "",
       });
       setImages([]);
     } catch (err: any) {
@@ -169,9 +169,9 @@ export default function CreateCase() {
             sx={{ bgcolor: "#f8fafd", borderRadius: 2 }}
           />
           <TextField
-            label="Specialization"
-            name="specialization"
-            value={form.specialization}
+            label="Category"
+            name="Category"
+            value={form.Category}
             onChange={handleChange}
             fullWidth
             margin="normal"
