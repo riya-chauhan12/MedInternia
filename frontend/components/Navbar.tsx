@@ -223,7 +223,7 @@ React.useEffect(() => {
                 display: { xs: 'none', sm: 'block' },
               }}
             >
-              Med Internia
+              MedInternia
             </Typography>
           </Box>
           <Box
