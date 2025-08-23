@@ -30,6 +30,7 @@ export default function BadgeCard({ badge }: { badge: any }) {
         alignItems: 'center',
         justifyContent: 'center',
         boxShadow: `0 0 18px 2px #2193b044`,
+        
         mb: 2,
         overflow: 'hidden',
         paddingTop: 2.5,
