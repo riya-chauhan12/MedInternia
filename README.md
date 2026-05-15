@@ -65,13 +65,6 @@ MedInternia/
 - Apply for jobs
 - Join webinars and video calls
 
-## Dummy Email Ids and passwords
-**Patient**:  Email: patientp1@medinternia.com 
-Password : Test@123 <br>
-**Doctor**:  Email : anushkav8475@gmail.com 
-    Password : Admin2006  <br>
-  **Intern** : Email: ram@gmail.com <
-    Password: Test@123 <br> 
 ## 🤝 Contribution
 Pull requests and issues are welcome! Please follow the code style and add documentation for new features.
 
