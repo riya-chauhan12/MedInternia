@@ -19,7 +19,56 @@ MedInternia is a comprehensive medical education and collaboration platform desi
 </p>
 
 </div>
+---
 
+# 🚨 Problem Statement
+
+The medical education and collaboration ecosystem faces critical real-world challenges:
+
+* **Limited collaborative case discussion platforms** — Medical professionals lack dedicated spaces for structured peer-to-peer case discussions
+* **Difficulty accessing medical mentorship and peer learning** — Interns and students struggle to connect with experienced doctors for guidance
+* **Fragmented internship and job discovery** — No centralized hub exists for medical internship, residency, and job opportunities
+* **Lack of centralized medical learning and networking ecosystems** — Medical knowledge, networking, and career tools are scattered across disconnected platforms
+
+---
+
+# 🎯 Project Vision
+
+MedInternia was built to transform how medical professionals learn, collaborate, and grow:
+
+* **Why MedInternia was built** — To create a unified platform where doctors, interns, students, and patients can connect, share knowledge, and advance their careers together
+* **Long-term goals** — To become the leading ecosystem for medical education, peer learning, mentorship, and career development globally
+* **Intended impact on medical education and collaboration** — Improve healthcare quality by empowering better-trained and better-connected medical professionals
+
+---
+
+# 💡 Solution Overview
+
+MedInternia addresses these challenges through an integrated platform:
+
+* **Case-Based Learning** — Explore and analyze real medical cases with peers
+* **Medical Job Board** — Find internships and career opportunities in one place
+* **Webinars & Live AMAs** — Join live sessions with experienced professionals
+* **Leaderboard & Achievements** — Track contributions and earn recognition
+* **AI-Powered Suggestions** — Get smart recommendations for learning and collaboration
+* **Peer Review & Ratings** — Maintain quality through community feedback
+
+---
+
+# 👥 User-Centric Narrative
+
+MedInternia is built for everyone in the medical ecosystem:
+
+| User | How MedInternia Helps |
+|------|----------------------|
+| 🎓 Medical Students | Case-based peer learning, mentorship, certifications |
+| 🏥 Interns | Job and residency discovery, skill building |
+| 👨‍⚕️ Doctors | Share expertise, review cases, host webinars |
+| 🤝 Contributors | Clear docs, good first issues, active maintainers |
+| 🏅 GSSoC Reviewers | Problem-driven architecture, real-world impact |
+| 💼 Recruiters | Modern tech stack, healthcare domain experience |
+
+---
 ---
 
 # 🌟 Features
