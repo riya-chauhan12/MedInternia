@@ -1,17 +1,14 @@
 // removed unused qrcode.react import (caused TypeScript default-export error)
 import {
-  Container,
-  Typography,
+  Alert,
   Box,
   Button,
   Paper,
-  Divider,
-  Stack,
   Snackbar,
-  Alert,
+  Stack,
+  Typography
 } from "@mui/material";
 // import Link from 'next/link';
-import Link from "next/link";
 
 import React, { useState } from "react";
 
