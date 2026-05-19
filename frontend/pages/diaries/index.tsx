@@ -305,7 +305,7 @@ const DiariesPage: React.FC = () => {
                     )}
                     {/* Profile Card */}
                     {profile && (
-                        <div className="med-card" style={{ padding: 24, marginBottom: 24, display: 'flex', alignItems: 'center', gap: 32, flexWrap: 'wrap', overflow: 'hidden' }}>
+                        <div className="med-card" style={{ padding: 24, marginBottom: 24, display: 'flex', alignItems: 'center', gap: 32, flexWrap: 'wrap' }}>
                             <div style={{ flex: 1 }}>
                                 <div style={{ fontWeight: 700, fontSize: 20, marginBottom: 4 }} className="med-blue">{profile.name} <span style={{ background: '#e3eafe', color: '#74a9bf', borderRadius: 8, padding: '2px 8px', fontSize: 13, marginLeft: 8 }}>{profile.badge}</span></div>
                                 <div style={{ color: '#555', fontSize: 15, marginBottom: 2 }}>{profile.email}</div>
