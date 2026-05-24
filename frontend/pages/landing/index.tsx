@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import CaseOfDayBanner from "../../components/CaseOfDayBanner";
 // Doctor type moved up to fix usage before declaration
 import { badges } from "../../utils/badges";
 import {
@@ -505,6 +506,10 @@ const PostForm = () => {
           marginBottom: 20,
         }}
       >
+
+        <CaseOfDayBanner />
+
+        
         Post New
       </h2>
       <div style={{ marginBottom: 20 }}>
