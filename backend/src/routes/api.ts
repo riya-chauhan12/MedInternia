@@ -39,6 +39,7 @@ router.get('/', (req: Request, res: Response) => {
       patients: '/api/patients',
       doctors: '/api/doctors',
       cases: '/api/cases',
+      aiCasePosts: '/api/cases/ai-posts',
       diseaseInsights: '/api/ai-disease-insights',
       badges: '/api/badges',
       peerReviews: '/api/peer-reviews',

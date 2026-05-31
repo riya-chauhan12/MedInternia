@@ -1,7 +1,9 @@
 import { Response } from 'express';
 import Case, { ICase } from '../models/Case';
 import User from '../models/User';
+import AICasePostSchedule from '../models/AICasePostSchedule';
 import { AuthRequest } from '../middleware/auth';
+import { buildAICaseSchedule, getNextAICasePostDate } from '../services/aiCasePostingService';
 
 const canModerateComments = (userType?: string) => ['admin', 'doctor', 'moderator'].includes(userType ?? '');
 const canAddCaseFollowUp = (userType?: string) => ['admin', 'doctor', 'intern', 'hospital_staff'].includes(userType ?? '');
@@ -11,6 +13,153 @@ const publicCaseFilter = {
     { moderationStatus: 'approved' },
     { moderationStatus: { $exists: false } }
   ]
+};
+
+export const scheduleAICasePost = async (req: AuthRequest, res: Response) => {
+  try {
+    const user = req.user as { _id: string; userType?: string } | undefined;
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'User not authenticated' });
+    }
+
+    const schedulePayload = buildAICaseSchedule(req.body);
+    const schedule = await AICasePostSchedule.create({
+      author: user._id,
+      generatedCase: schedulePayload.generatedCase,
+      interval: schedulePayload.interval,
+      scheduledFor: schedulePayload.scheduledFor,
+      nextRunAt: schedulePayload.scheduledFor,
+      reviewStatus: 'pending'
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: 'AI case draft scheduled for clinical review',
+      data: { schedule }
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unable to schedule AI case draft';
+    return res.status(400).json({ success: false, message });
+  }
+};
+
+export const getMyAICaseSchedules = async (req: AuthRequest, res: Response) => {
+  try {
+    const user = req.user as { _id: string } | undefined;
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'User not authenticated' });
+    }
+
+    const schedules = await AICasePostSchedule.find({ author: user._id, isActive: true })
+      .populate('publishedCase', 'title createdAt')
+      .sort({ nextRunAt: 1 });
+
+    return res.json({
+      success: true,
+      data: { schedules }
+    });
+  } catch (error) {
+    console.error('Get AI case schedules error:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+export const reviewAICasePost = async (req: AuthRequest, res: Response) => {
+  try {
+    const user = req.user as { _id: string } | undefined;
+    const { scheduleId } = req.params;
+    const { reviewStatus, reviewNotes } = req.body;
+
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'User not authenticated' });
+    }
+
+    if (!['approved', 'changes_requested', 'rejected'].includes(reviewStatus)) {
+      return res.status(400).json({
+        success: false,
+        message: 'reviewStatus must be approved, changes_requested, or rejected'
+      });
+    }
+
+    const schedule = await AICasePostSchedule.findByIdAndUpdate(
+      scheduleId,
+      {
+        reviewStatus,
+        reviewNotes: typeof reviewNotes === 'string' ? reviewNotes.trim() : undefined,
+        reviewedBy: user._id,
+        reviewedAt: new Date()
+      },
+      { new: true, runValidators: true }
+    );
+
+    if (!schedule) {
+      return res.status(404).json({ success: false, message: 'AI case schedule not found' });
+    }
+
+    return res.json({
+      success: true,
+      message: 'AI case review status updated',
+      data: { schedule }
+    });
+  } catch (error) {
+    console.error('Review AI case post error:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+export const publishDueAICasePosts = async (req: AuthRequest, res: Response) => {
+  try {
+    const dueSchedules = await AICasePostSchedule.find({
+      isActive: true,
+      reviewStatus: 'approved',
+      nextRunAt: { $lte: new Date() }
+    }).limit(10);
+
+    const published = [];
+    for (const schedule of dueSchedules) {
+      const generatedCase = schedule.generatedCase;
+      const publishedCase = await Case.create({
+        title: generatedCase.title,
+        description: generatedCase.description,
+        symptoms: generatedCase.symptoms,
+        patientInfo: generatedCase.patientInfo,
+        diagnosis: generatedCase.diagnosis,
+        treatment: generatedCase.treatment,
+        tags: generatedCase.tags,
+        difficulty: generatedCase.difficulty,
+        specialization: generatedCase.specialization,
+        doctor: schedule.author,
+        isPatientCase: false,
+        moderationStatus: 'approved',
+        moderationAuditTrail: [{
+          status: 'approved',
+          reason: 'AI-generated scheduled case approved before publication',
+          reviewedBy: schedule.reviewedBy,
+          reviewedAt: schedule.reviewedAt ?? new Date()
+        }],
+        pointsAwarded: 0
+      });
+
+      schedule.publishedCase = publishedCase._id as any;
+      schedule.lastPublishedAt = new Date();
+      schedule.nextRunAt = getNextAICasePostDate(schedule.nextRunAt, schedule.interval);
+      await schedule.save();
+
+      published.push(publishedCase);
+    }
+
+    return res.json({
+      success: true,
+      message: 'Due AI case drafts published',
+      data: {
+        count: published.length,
+        cases: published
+      }
+    });
+  } catch (error) {
+    console.error('Publish due AI case posts error:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
 };
 
 // Reply to a comment

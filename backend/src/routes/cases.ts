@@ -11,12 +11,16 @@ import {
   addFollowUp,
   getCaseFollowUps,
   getCaseModerationQueue,
+  getMyAICaseSchedules,
   generateAISuggestions,
   getCaseAISuggestions,
   moderateCase,
+  publishDueAICasePosts,
   pinComment,
   unpinComment,
   getPinnedComments,
+  reviewAICasePost,
+  scheduleAICasePost,
   toggleRepostPermission,
   repostCase,
   replyToComment,
@@ -32,9 +36,13 @@ const router = express.Router();
 router.get('/', authenticate, getCases);
 router.get('/my/cases', authenticate, getMyCases);
 router.get('/moderation/queue', authenticate, requirePermission('comment:moderate'), getCaseModerationQueue);
+router.get('/ai-posts/my', authenticate, getMyAICaseSchedules);
 
 // Permission-guarded case management routes
 router.post('/', authenticate, requirePermission('case:create'), createCase);
+router.post('/ai-posts/schedule', authenticate, requirePermission('case:create'), scheduleAICasePost);
+router.patch('/ai-posts/:scheduleId/review', authenticate, requirePermission('comment:moderate'), reviewAICasePost);
+router.post('/ai-posts/publish-due', authenticate, requirePermission('comment:moderate'), publishDueAICasePosts);
 router.get('/:id', authenticate, getCaseById);
 router.put('/:id', authenticate, requirePermission('case:update'), updateCase);
 router.delete('/:id', authenticate, requirePermission('case:delete'), deleteCase);
