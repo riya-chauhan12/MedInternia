@@ -1,5 +1,8 @@
-import { Box, Container, Grid, Paper, Stack, Typography } from "@mui/material";
+import { useEffect, useState } from "react";
+import { Box, CircularProgress, Container, Grid, Paper, Stack, Typography } from "@mui/material";
 import { Award, Medal, Trophy } from "lucide-react";
+import { useRouter } from "next/router";
+import { hasAuthToken, redirectToLogin } from "../utils/authRedirect";
 
 const contributors = [
   { rank: 1, name: "Dr. Smith", points: 320, badge: "Case Champion" },
@@ -8,6 +11,28 @@ const contributors = [
 ];
 
 export default function LeaderboardPage() {
+  const router = useRouter();
+  const [authChecked, setAuthChecked] = useState(false);
+
+  useEffect(() => {
+    if (!router.isReady) return;
+
+    if (!hasAuthToken()) {
+      redirectToLogin(router, "/leaderboard");
+      return;
+    }
+
+    setAuthChecked(true);
+  }, [router]);
+
+  if (!authChecked) {
+    return (
+      <Box sx={{ display: "flex", justifyContent: "center", mt: 10 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
   return (
     <Box sx={{ flex: 1, background: "linear-gradient(120deg, #e0eafc 0%, #f8f9fa 100%)", py: { xs: 6, md: 10 } }}>
       <Container maxWidth="lg">

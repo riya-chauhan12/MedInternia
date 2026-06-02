@@ -1,7 +1,9 @@
 // GSSoC: Redesigned Footer component to match MedInternia design
+import React from 'react';
 import Link from 'next/link';
 import { Linkedin, Twitter, Instagram, Mail, Send } from 'lucide-react';
 import { Box, Typography, Stack, Divider, IconButton, InputBase, Paper } from '@mui/material';
+import { getLoginHref, protectedLandingPaths } from '../utils/authRedirect';
 
 const quickLinks = [
   { label: 'Cases', href: '/cases' },
@@ -18,6 +20,16 @@ const resourcesLinks = [
 ];
 
 export default function Footer() {
+  const [isLoggedIn, setIsLoggedIn] = React.useState(false);
+
+  React.useEffect(() => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    setIsLoggedIn(Boolean(token));
+  }, []);
+
+  const getAuthAwareHref = (path: string) =>
+    !isLoggedIn && protectedLandingPaths.includes(path) ? getLoginHref(path) : path;
+
   return (
     <Box
       component="footer"
@@ -102,7 +114,7 @@ export default function Footer() {
           </Typography>
           <Stack spacing={2}>
             {quickLinks.map((link) => (
-              <Link key={link.href} href={link.href} passHref legacyBehavior>
+              <Link key={link.href} href={getAuthAwareHref(link.href)} passHref legacyBehavior>
                 <Typography
                   component="a"
                   variant="body2"

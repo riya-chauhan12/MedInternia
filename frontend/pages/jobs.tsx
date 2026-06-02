@@ -11,14 +11,31 @@ import {
   CircularProgress,
   Alert,
 } from "@mui/material";
+import { useRouter } from "next/router";
 import api from "../utils/api";
+import { hasAuthToken, redirectToLogin } from "../utils/authRedirect";
 
 export default function Jobs() {
+  const router = useRouter();
   const [jobs, setJobs] = useState<any[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
+    if (!router.isReady) return;
+
+    if (!hasAuthToken()) {
+      redirectToLogin(router, "/jobs");
+      return;
+    }
+
+    setAuthChecked(true);
+  }, [router]);
+
+  useEffect(() => {
+    if (!authChecked) return;
+
     api
       .get("/jobs")
       .then((res) => {
@@ -29,7 +46,7 @@ export default function Jobs() {
         setError("Failed to fetch jobs");
         setLoading(false);
       });
-  }, []);
+  }, [authChecked]);
 
   if (loading)
     return (

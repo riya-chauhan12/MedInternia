@@ -50,21 +50,37 @@ export default function Dashboard() {
           return;
         }
 
-        // Fetch all data in parallel
-        const [userRes, casesRes, webinarsRes, notificationsRes, badgesRes] = await Promise.all([
-          api.get(`/users/${userId}/profile`),
-          api.get('/cases/my/cases?limit=5'),
-          api.get('/webinars/my?type=registered'),
-          api.get('/notifications'),
-          api.get(`/badges/user/${userId}`)
+        const userRes = await api.get(`/users/${userId}/profile`);
+        const user = userRes.data?.data?.user || userRes.data?.user || userRes.data;
+
+        const optionalRequest = async <T,>(request: Promise<{ data: T }>, fallback: T) => {
+          try {
+            const response = await request;
+            return response.data;
+          } catch (err: any) {
+            if (err.response?.status === 401) throw err;
+            return fallback;
+          }
+        };
+
+        // Fetch optional dashboard widgets independently so one role-restricted
+        // endpoint cannot prevent the rest of the dashboard from loading.
+        const [casesRes, webinarsRes, notificationsRes, badgesRes] = await Promise.all([
+          user.userType === 'doctor'
+            ? optionalRequest(api.get('/cases/my/cases?limit=5'), { data: { cases: [] } })
+            : Promise.resolve({ data: { cases: [] } }),
+          optionalRequest(api.get('/webinars/my?type=registered'), { data: { webinars: [] } }),
+          optionalRequest(api.get('/notifications'), { notifications: [] }),
+          optionalRequest(api.get(`/badges/user/${userId}`), { data: { badges: [] } })
         ]);
+        const getList = (payload: any, key: string) => payload?.data?.[key] || payload?.[key] || [];
 
         setData({
-          user: userRes.data?.data?.user || userRes.data?.user || userRes.data,
-          cases: casesRes.data?.data?.cases || casesRes.data?.cases || [],
-          webinars: webinarsRes.data?.data?.webinars || webinarsRes.data?.webinars || [],
-          notifications: (notificationsRes.data?.data?.notifications || notificationsRes.data?.notifications || []).slice(0, 5),
-          badges: badgesRes.data?.data?.badges || badgesRes.data?.badges || []
+          user,
+          cases: getList(casesRes, 'cases'),
+          webinars: getList(webinarsRes, 'webinars'),
+          notifications: getList(notificationsRes, 'notifications').slice(0, 5),
+          badges: getList(badgesRes, 'badges')
         });
       } catch (err: any) {
         console.error('Dashboard fetch error:', err);

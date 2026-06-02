@@ -6,6 +6,7 @@ import { useRouter } from 'next/router';
 import { motion, Variants } from 'framer-motion';
 import { Box, Button, Typography, Paper, Stack, Container, Grid, IconButton } from '@mui/material';
 import { Search, PlayCircle, FolderOpen, Briefcase, Video, Award, ChevronRight, CheckCircle2, HeadphonesIcon, UserPlus } from 'lucide-react';
+import { getLoginHref, protectedLandingPaths } from '../utils/authRedirect';
 
 export default function HomePage() {
   const router = useRouter();
@@ -15,6 +16,9 @@ export default function HomePage() {
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
     setIsLoggedIn(!!token);
   }, []);
+
+  const getAuthAwareHref = (path: string) =>
+    !isLoggedIn && protectedLandingPaths.includes(path) ? getLoginHref(path) : path;
 
   const fadeInUp: Variants = {
     hidden: { opacity: 0, y: 40 },
@@ -46,7 +50,7 @@ export default function HomePage() {
 
         <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 4 }}>
           {(isLoggedIn ? ['Cases', 'Jobs', 'Webinars', 'Leaderboard', 'About'] : ['Jobs', 'Webinars', 'Leaderboard', 'About']).map((item) => (
-            <Link key={item} href={`/${item.toLowerCase()}`} passHref legacyBehavior>
+            <Link key={item} href={getAuthAwareHref(`/${item.toLowerCase()}`)} passHref legacyBehavior>
               <Typography component="a" fontWeight={600} color="#4a5568" sx={{ textDecoration: 'none', transition: 'all 0.2s', '&:hover': { color: '#0072ff', borderBottom: 'none !important', textDecoration: 'none' } }}>{item}</Typography>
             </Link>
           ))}
@@ -157,7 +161,7 @@ export default function HomePage() {
                     </Box>
                     <Typography variant="h5" fontWeight={800} color="#1a202c" mb={1.5}>{item.title}</Typography>
                     <Typography variant="body1" color="#64748b" mb={4} flexGrow={1} lineHeight={1.6}>{item.desc}</Typography>
-                    <Link href={item.link} style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', color: '#0072ff', fontWeight: 700, position: 'relative', width: 'fit-content', paddingBottom: '2px' }}>
+                    <Link href={getAuthAwareHref(item.link)} style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', color: '#0072ff', fontWeight: 700, position: 'relative', width: 'fit-content', paddingBottom: '2px' }}>
                       Explore <ChevronRight size={18} style={{ marginLeft: 4 }} />
                       <Box className="explore-underline" sx={{ position: 'absolute', bottom: 0, left: 0, width: '0%', height: '2px', bgcolor: '#0072ff', transition: 'width 0.3s ease-in-out', borderRadius: '2px' }} />
                     </Link>
@@ -174,7 +178,7 @@ export default function HomePage() {
         <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeInUp}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 5 }}>
             <Typography variant="h4" fontWeight={800} color="#1a202c">Top Contributors</Typography>
-            <Link href="/leaderboard" style={{ textDecoration: 'none', color: '#0072ff', fontWeight: 700, display: 'inline-flex', alignItems: 'center', position: 'relative', paddingBottom: '2px', '&:hover .top-underline': { width: '100%' } } as any}>
+            <Link href={getAuthAwareHref("/leaderboard")} style={{ textDecoration: 'none', color: '#0072ff', fontWeight: 700, display: 'inline-flex', alignItems: 'center', position: 'relative', paddingBottom: '2px', '&:hover .top-underline': { width: '100%' } } as any}>
               View Leaderboard <ChevronRight size={20} />
               <Box className="top-underline" sx={{ position: 'absolute', bottom: 0, left: 0, width: '0%', height: '2px', bgcolor: '#0072ff', transition: 'width 0.3s ease-in-out', borderRadius: '2px' }} />
             </Link>

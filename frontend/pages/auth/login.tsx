@@ -6,6 +6,7 @@ import api from '../../utils/api';
 import { useRouter } from 'next/router';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
+import { getSafeRedirectPath } from '../../utils/authRedirect';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -35,7 +36,7 @@ export default function Login() {
   const userId = user?._id || user?.id || '';
   localStorage.setItem('token', token);
   localStorage.setItem('userId', userId);
-  router.push('/dashboard');
+  router.push(getSafeRedirectPath(router.query.redirect));
     } catch (err: any) {
       setError(err.response?.data?.message || 'Login failed');
     } finally {

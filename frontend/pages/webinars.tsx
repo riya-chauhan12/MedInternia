@@ -9,31 +9,57 @@ import {
   Button,
   Chip,
   IconButton,
+  CircularProgress,
 } from "@mui/material";
 import AddIcon from '@mui/icons-material/Add';
-    import api from '../utils/api';
+import { useRouter } from "next/router";
+import api from '../utils/api';
 import WebinarJoin from "../components/WebinarJoin";
 import { canUser } from "../utils/permissions";
+import { hasAuthToken, redirectToLogin } from "../utils/authRedirect";
 
 export default function WebinarsPage() {
+  const router = useRouter();
   const [webinars, setWebinars] = useState<any[]>([]);
   const [selectedWebinar, setSelectedWebinar] = useState<any>(null);
   const [canManageWebinars, setCanManageWebinars] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
 
 
-    useEffect(() => {
-      api.get('/webinars')
-        .then(res => setWebinars(res.data.data.webinars || []))
-        .catch(() => setWebinars([]));
+  useEffect(() => {
+    if (!router.isReady) return;
 
-      // Fetch user profile to check whether the current role can manage webinars.
-      api.get('/auth/profile')
-        .then(res => {
-          const userType = res.data?.data?.user?.userType;
-          setCanManageWebinars(canUser(userType, 'webinar:manage'));
-        })
-        .catch(() => setCanManageWebinars(false));
-    }, []);
+    if (!hasAuthToken()) {
+      redirectToLogin(router, "/webinars");
+      return;
+    }
+
+    setAuthChecked(true);
+  }, [router]);
+
+  useEffect(() => {
+    if (!authChecked) return;
+
+    api.get('/webinars')
+      .then(res => setWebinars(res.data.data.webinars || []))
+      .catch(() => setWebinars([]));
+
+    // Fetch user profile to check whether the current role can manage webinars.
+    api.get('/auth/profile')
+      .then(res => {
+        const userType = res.data?.data?.user?.userType;
+        setCanManageWebinars(canUser(userType, 'webinar:manage'));
+      })
+      .catch(() => setCanManageWebinars(false));
+  }, [authChecked]);
+
+  if (!authChecked) {
+    return (
+      <Box sx={{ display: "flex", justifyContent: "center", mt: 10 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   if (selectedWebinar) {
     return <WebinarJoin meetingLink={selectedWebinar.meetingLink} onLeave={() => setSelectedWebinar(null)} />;
