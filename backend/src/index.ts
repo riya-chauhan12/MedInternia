@@ -1,4 +1,8 @@
 ﻿import express, { Application, Request, Response } from 'express';
+import http from 'http';
+import { Server as SocketIOServer } from 'socket.io';
+import { setSocketIO } from './utils/socket';
+import { verifyToken } from './utils/jwt';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -133,11 +137,70 @@ app.get('/health', (req: Request, res: Response) => {
 
 app.use('/api', apiRoutes);
 
-// Start server
-app.listen(PORT, () => {
+// Create HTTP server (required for Socket.io)
+const httpServer = http.createServer(app);
+
+// Initialize Socket.io with CORS matching existing config
+const io = new SocketIOServer(httpServer, {
+  cors: {
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (isAllowedOrigin(origin)) return callback(null, true);
+      return callback(new Error(`Not allowed by CORS: ${origin}`));
+    },
+    methods: ['GET', 'POST'],
+    credentials: true,
+  },
+});
+
+// Register io instance globally so controllers can emit events
+setSocketIO(io);
+
+// Socket.io JWT Authentication Middleware
+io.use(async (socket, next) => {
+  try {
+    const token =
+      socket.handshake.auth?.token ||
+      socket.handshake.headers?.authorization?.replace('Bearer ', '');
+
+    if (!token) {
+      return next(new Error('Authentication token missing'));
+    }
+
+    const decoded = verifyToken(token);
+    if (!decoded) {
+      return next(new Error('Invalid or expired token'));
+    }
+
+    // Attach userId to socket for later use
+    (socket as any).userId = decoded.userId;
+    next();
+  } catch (err) {
+    next(new Error('Socket authentication failed'));
+  }
+});
+
+// Handle socket connections
+io.on('connection', (socket) => {
+  const userId = (socket as any).userId;
+
+  // Each user joins their own private room
+  // This lets us emit to a specific user from any controller
+  socket.join(`user:${userId}`);
+  console.log(`Socket connected: user ${userId} joined room user:${userId}`);
+
+  socket.on('disconnect', () => {
+    console.log(`Socket disconnected: user ${userId}`);
+  });
+});
+
+// Start server (httpServer instead of app.listen)
+httpServer.listen(PORT, () => {
   console.log(`Doctor-Intern Collaboration Platform running on port ${PORT}`);
   console.log(`Health check: http://localhost:${PORT}/health`);
   console.log(`API docs: http://localhost:${PORT}/api`);
+  console.log(`Socket.io ready`);
 });
 
+export { io };
 export default app;

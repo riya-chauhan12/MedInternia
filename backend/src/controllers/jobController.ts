@@ -1,3 +1,4 @@
+import { createAndEmitNotification } from './notificationController';
 import { Request, Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import JobOpportunity from '../models/JobOpportunity';
@@ -107,12 +108,7 @@ export const getJobOpportunities = async (req: Request, res: Response) => {
 
     res.json({
       success: true,
-      data: {
-        jobOpportunities,
-        total,
-        totalPages: Math.ceil(total / Number(limit)),
-        currentPage: Number(page)
-      }
+      data: { jobOpportunities, total, page, totalPages: Math.ceil(total / Number(limit)) }
     });
   } catch (error) {
     console.error('Get job opportunities error:', error);
@@ -316,6 +312,18 @@ export const applyToJob = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({
         success: false,
         message: 'Job opportunity not found'
+      });
+    }
+
+    // Notify the job poster that someone applied
+    if (jobOpportunity.postedBy) {
+      const poster = jobOpportunity.postedBy as any;
+      await createAndEmitNotification({
+        recipientId: poster._id.toString(),
+        type:        'job_status',
+        message:     `Someone applied to your job posting: "${jobOpportunity.title}"`,
+        link:        `/jobs/${(jobOpportunity._id as any).toString()}`,
+        payload:     { jobId: (jobOpportunity._id as any).toString() },
       });
     }
 

@@ -1,3 +1,4 @@
+import { createAndEmitNotification } from './notificationController';
 import { Response } from 'express';
 import Case, { ICase } from '../models/Case';
 import User from '../models/User';
@@ -708,6 +709,19 @@ export const addComment = async (req: AuthRequest, res: Response) => {
     await caseData.save();
     await caseData.populate('comments.author', 'firstName lastName userType');
     const addedComment = caseData.comments[caseData.comments.length - 1];
+
+    // Notify case owner if commenter is a different user
+  const caseAuthorId = (caseData as any).author?.toString();
+    if (caseAuthorId && caseAuthorId !== user._id.toString()) {
+      await createAndEmitNotification({
+        recipientId: caseAuthorId,
+        type:        'comment',
+        message:     `Someone commented on your case: "${(caseData as any).title}"`,
+        link:        `/cases/${id}`,
+        payload:     { caseId: id, commentId: addedComment._id },
+      });
+    }
+
     res.status(201).json({ success: true, message: 'Comment added successfully', data: { comment: addedComment } });
   } catch (error) {
     console.error('Add comment error:', error);

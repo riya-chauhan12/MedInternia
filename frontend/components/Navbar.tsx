@@ -28,6 +28,7 @@ import MenuIcon from "@mui/icons-material/Menu";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import ProfileDropdown from "./ProfileDropdown";
+import NotificationBell from "./NotificationBell";
 import SearchIcon from "@mui/icons-material/Search";
 import ArticleIcon from "@mui/icons-material/Article";
 import CloseIcon from "@mui/icons-material/Close";
@@ -508,16 +509,7 @@ export default function Navbar({ route }: { route?: string }) {
                 label="Research Paper"
                 isActive={router.pathname === "/research_paper"}
               />
-              <Tooltip title="Notifications" placement="bottom" arrow>
-                <IconButton
-                  color="inherit"
-                  sx={{ mx: 0.5, p: 1.2, borderRadius: 2 }}
-                  onClick={() => router.push("/notifications")}
-                  aria-label="Notifications"
-                >
-                  <NotificationsIcon />
-                </IconButton>
-              </Tooltip>
+              <NotificationBell />
             </Box>
           )}
 

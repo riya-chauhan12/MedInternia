@@ -1,17 +1,20 @@
 import express from 'express';
-import { getNotifications } from '../controllers/notificationController';
+import {
+  getNotifications,
+  markAllRead,
+  markRead,
+} from '../controllers/notificationController';
 import { authenticate } from '../middleware/auth';
 
 const router = express.Router();
 
-// Get notifications for logged-in user
+// GET  /api/notifications          — fetch last 30 for logged-in user
 router.get('/', authenticate, getNotifications);
 
-// Mark all notifications as read
-import { markAllRead, markRead } from '../controllers/notificationController';
-router.post('/mark-all-read', authenticate, markAllRead);
+// PATCH /api/notifications/read-all    — mark ALL as read
+router.patch('/read-all', authenticate, markAllRead);
 
-// Mark a single notification as read
-router.post('/mark-read', authenticate, markRead);
+// PATCH /api/notifications/:id/read   — mark ONE as read
+router.patch('/:id/read', authenticate, markRead);
 
 export default router;

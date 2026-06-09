@@ -109,7 +109,7 @@ export default function NotificationsPage() {
           onClick={async () => {
             setAllRead(true);
             try {
-              await api.post("/notifications/mark-all-read");
+              await api.patch("/notifications/read-all");
             } catch {}
           }}
         >
@@ -165,7 +165,7 @@ export default function NotificationsPage() {
                   if (n.unread) {
                     setNotifications(prev => prev.map(notif => notif.id === n.id ? { ...notif, unread: false } : notif));
                     try {
-                      await api.post(`/notifications/mark-read`, { id: n._id });
+                      await api.patch(`/notifications/${n._id}/read`);
                     } catch {}
                   }
                 }}

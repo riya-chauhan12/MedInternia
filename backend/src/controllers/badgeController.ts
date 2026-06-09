@@ -1,3 +1,4 @@
+import { createAndEmitNotification } from './notificationController';
 import { Request, Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import Badge from '../models/Badge';
@@ -98,6 +99,15 @@ export const awardBadge = async (req: AuthRequest, res: Response) => {
 
     // Populate badge info
     await userBadge.populate('badge');
+     // Notify user they earned a badge
+    const badgeData = userBadge.badge as any;
+    await createAndEmitNotification({
+      recipientId: userId,
+      type:        'badge',
+      message:     `Congratulations! You earned the "${badgeData?.name || 'new'}" badge`,
+      link:        `/profile/achievements`,
+      payload:     { badgeId, userBadgeId: userBadge._id },
+    });
 
     res.status(201).json({
       success: true,
