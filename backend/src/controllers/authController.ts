@@ -5,6 +5,8 @@ import User, { IUser } from '../models/User';
 import { generateToken } from '../utils/jwt';
 import { AuthRequest } from '../middleware/auth';
 import { uploadProfileImage } from '../utils/cloudinary';
+import { OAuth2Client } from 'google-auth-library';
+import crypto from 'crypto';
 
 // Upload profile picture
 export const uploadProfilePicture = async (req: AuthRequest, res: Response) => {
@@ -524,4 +526,244 @@ export const resetPassword = async (req: Request, res: Response) => {
   await user.save();
   delete otpStore[email + '_reset'];
   return res.json({ success: true, message: 'Password reset successfully' });
+};
+
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+export const googleAuth = async (req: Request, res: Response) => {
+  try {
+    const { credential, registerIfNotFound = true, userType = 'patient', ...otherFields } = req.body;
+
+    if (!credential) {
+      return res.status(400).json({
+        success: false,
+        message: 'Google credential (ID token) is required'
+      });
+    }
+
+    let payload;
+    try {
+      const ticket = await client.verifyIdToken({
+        idToken: credential,
+        audience: process.env.GOOGLE_CLIENT_ID
+      });
+      payload = ticket.getPayload();
+    } catch (verifyError) {
+      console.error('Google token verification failed:', verifyError);
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid Google token'
+      });
+    }
+
+    if (!payload) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid Google token payload'
+      });
+    }
+
+    const { sub: googleId, email, email_verified, given_name: firstName, family_name: lastName, picture: profilePicture } = payload;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Google account does not provide an email'
+      });
+    }
+
+    if (!email_verified) {
+      return res.status(400).json({
+        success: false,
+        message: 'Google email is not verified'
+      });
+    }
+
+    let user = await User.findOne({
+      $or: [{ googleId }, { email: email.toLowerCase() }]
+    });
+
+    if (user) {
+      let needsSave = false;
+      if (!user.googleId) {
+        user.googleId = googleId;
+        needsSave = true;
+      }
+      if (!user.profilePicture && profilePicture) {
+        user.profilePicture = profilePicture;
+        needsSave = true;
+      }
+      if (needsSave) {
+        await user.save();
+      }
+
+      if (!user.isActive) {
+        return res.status(401).json({
+          success: false,
+          message: 'Account is deactivated. Please contact support.'
+        });
+      }
+
+      const token = generateToken({
+        userId: (user._id as any).toString(),
+        email: user.email,
+        userType: user.userType
+      });
+
+      const userResponse = user.toObject() as any;
+      delete userResponse.password;
+      userResponse.role = user.userType;
+
+      return res.json({
+        success: true,
+        message: 'Login successful',
+        data: {
+          user: userResponse,
+          token
+        }
+      });
+    }
+
+    if (!registerIfNotFound) {
+      return res.status(404).json({
+        success: false,
+        code: 'USER_NOT_FOUND',
+        message: 'No user account found. Please complete registration.',
+        data: {
+          email,
+          firstName,
+          lastName,
+          profilePicture
+        }
+      });
+    }
+
+    const validUserTypes = ['patient', 'doctor', 'intern'];
+    if (!validUserTypes.includes(userType)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid user type'
+      });
+    }
+
+    if (userType === 'doctor') {
+      const { specialization, licenseNumber } = otherFields;
+      if (!specialization || !licenseNumber) {
+        return res.status(400).json({
+          success: false,
+          message: 'Specialization and license number are required for doctors'
+        });
+      }
+      const existingLicense = await User.findOne({ licenseNumber });
+      if (existingLicense) {
+        return res.status(400).json({
+          success: false,
+          message: 'Doctor with this license number already exists'
+        });
+      }
+    }
+
+    if (userType === 'intern') {
+      const { medicalSchool, yearOfStudy } = otherFields;
+      if (!medicalSchool || !yearOfStudy) {
+        return res.status(400).json({
+          success: false,
+          message: 'Medical school and year of study are required for interns'
+        });
+      }
+    }
+
+    const randomPassword = crypto.randomBytes(16).toString('hex');
+
+    const userData: Partial<IUser> = {
+      googleId,
+      firstName: firstName || 'GoogleUser',
+      lastName: lastName || 'User',
+      email: email.toLowerCase(),
+      password: randomPassword,
+      userType: userType as any,
+      profilePicture,
+      isVerified: true,
+      isActive: true,
+      phone: otherFields.phone,
+      dateOfBirth: otherFields.dateOfBirth ? new Date(otherFields.dateOfBirth) : undefined,
+      gender: otherFields.gender,
+    };
+
+    if (userType === 'doctor') {
+      userData.specialization = otherFields.specialization;
+      userData.licenseNumber = otherFields.licenseNumber;
+      userData.experience = otherFields.experience;
+      userData.qualifications = otherFields.qualifications ? otherFields.qualifications.split(',').map((q: string) => q.trim()).filter(Boolean) : [];
+    }
+
+    if (userType === 'intern') {
+      userData.medicalSchool = otherFields.medicalSchool;
+      userData.yearOfStudy = otherFields.yearOfStudy;
+      userData.interests = otherFields.interests ? otherFields.interests.split(',').map((i: string) => i.trim()).filter(Boolean) : [];
+      userData.mentorDoctor = otherFields.mentorDoctor;
+    }
+
+    if (userType === 'patient') {
+      userData.emergencyContact = {
+        name: otherFields.emergencyContactName,
+        phone: otherFields.emergencyContactPhone,
+        relationship: otherFields.emergencyContactRelationship
+      };
+      userData.medicalHistory = otherFields.medicalHistory ? otherFields.medicalHistory.split(',').map((h: string) => h.trim()).filter(Boolean) : [];
+      userData.allergies = otherFields.allergies ? otherFields.allergies.split(',').map((a: string) => a.trim()).filter(Boolean) : [];
+    }
+
+    const newUser = new User(userData);
+    await newUser.save();
+
+    if (newUser.userType === 'intern') {
+      try {
+        const Webinar = require('../models/Webinar').default;
+        const Notification = require('../models/Notification').default;
+        const webinars = await Webinar.find({});
+        const notifications = [];
+        for (const webinar of webinars) {
+          await webinar.populate('host', 'firstName lastName');
+          const host = webinar.host as any;
+          notifications.push({
+            recipient: newUser._id,
+            message: `New webinar scheduled: ${webinar.title} by Dr. ${host.firstName} ${host.lastName}`,
+            type: 'webinar',
+            link: webinar.meetingLink
+          });
+        }
+        if (notifications.length > 0) {
+          await Notification.insertMany(notifications);
+        }
+      } catch (err) {
+        console.error('Error creating notifications:', err);
+      }
+    }
+
+    const token = generateToken({
+      userId: (newUser._id as any).toString(),
+      email: newUser.email,
+      userType: newUser.userType
+    });
+
+    const userResponse = newUser.toObject() as any;
+    delete userResponse.password;
+    userResponse.role = newUser.userType;
+
+    res.status(201).json({
+      success: true,
+      message: 'User registered and logged in successfully',
+      data: {
+        user: userResponse,
+        token
+      }
+    });
+  } catch (error) {
+    console.error('Google auth error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
 };

@@ -1,7 +1,7 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, CircularProgress } from '@mui/material';
-import { Container, Typography, TextField, Button, Box, Alert, MenuItem, Card, Avatar, Fade, Grow, Stack, LinearProgress, IconButton, InputAdornment } from '@mui/material';
+import { Container, Typography, TextField, Button, Box, Alert, MenuItem, Card, Avatar, Fade, Grow, Stack, LinearProgress, IconButton, InputAdornment, Divider } from '@mui/material';
 import api from '../../utils/api';
 import { useRouter } from 'next/router';
 import Visibility from '@mui/icons-material/Visibility';
@@ -18,6 +18,7 @@ export default function Register() {
     phone: '',
     dateOfBirth: '',
     gender: '',
+    profilePicture: '',
     // Doctor fields
     specialization: '',
     licenseNumber: '',
@@ -41,6 +42,77 @@ export default function Register() {
   const [step, setStep] = useState(1);
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
+  const [isGoogleSignup, setIsGoogleSignup] = useState(false);
+  const [googleCredential, setGoogleCredential] = useState('');
+
+  const handleGoogleSuccess = async (response: any) => {
+    try {
+      setError('');
+      const res = await api.post('/auth/google', {
+        credential: response.credential,
+        registerIfNotFound: false
+      });
+      
+      const token = res.data?.data?.token;
+      const user = res.data?.data?.user;
+      const role = user?.role || user?.userType || '';
+      const userId = user?._id || user?.id || '';
+      
+      localStorage.setItem('token', token);
+      localStorage.setItem('role', role);
+      localStorage.setItem('userId', userId);
+      
+      router.push('/dashboard');
+    } catch (err: any) {
+      if (err.response?.status === 404 && err.response?.data?.code === 'USER_NOT_FOUND') {
+        const data = err.response.data.data;
+        setForm(prev => ({
+          ...prev,
+          firstName: data.firstName || '',
+          lastName: data.lastName || '',
+          email: data.email || '',
+          profilePicture: data.profilePicture || ''
+        }));
+        setGoogleCredential(response.credential);
+        setIsGoogleSignup(true);
+      } else {
+        setError(err.response?.data?.message || 'Google authentication failed');
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (isGoogleSignup || step !== 1) return;
+
+    const initializeGoogleSignIn = () => {
+      const google = (window as any).google;
+      if (google && google.accounts && google.accounts.id) {
+        google.accounts.id.initialize({
+          client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+          callback: handleGoogleSuccess,
+        });
+        google.accounts.id.renderButton(
+          document.getElementById('google-signup-button'),
+          { 
+            theme: 'outline', 
+            size: 'large', 
+            width: 380,
+            text: 'signup_with',
+            shape: 'rectangular',
+          }
+        );
+      }
+    };
+
+    const interval = setInterval(() => {
+      if ((window as any).google) {
+        initializeGoogleSignIn();
+        clearInterval(interval);
+      }
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, [isGoogleSignup, step]);
 
   const handleClickShowPassword = () => setShowPassword((show) => !show);
 
@@ -162,7 +234,10 @@ export default function Register() {
     e.preventDefault();
     setError('');
     // Check all required fields in step 1 are filled
-    const missing = requiredFieldsStep1.filter(f => !form[f]);
+    const missing = requiredFieldsStep1.filter(f => {
+      if (isGoogleSignup && f === 'password') return false;
+      return !form[f];
+    });
     if (missing.length > 0) {
       setError('Please fill all required fields.');
       return;
@@ -203,8 +278,25 @@ export default function Register() {
       return;
     }
     try {
-      await api.post('/auth/register', form);
-      router.push('/auth/login');
+      if (isGoogleSignup) {
+        const res = await api.post('/auth/google', {
+          credential: googleCredential,
+          ...form
+        });
+        const token = res.data?.data?.token;
+        const user = res.data?.data?.user;
+        const role = user?.role || user?.userType || '';
+        const userId = user?._id || user?.id || '';
+        
+        localStorage.setItem('token', token);
+        localStorage.setItem('role', role);
+        localStorage.setItem('userId', userId);
+        
+        router.push('/dashboard');
+      } else {
+        await api.post('/auth/register', form);
+        router.push('/auth/login');
+      }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Registration failed');
     }
@@ -239,11 +331,23 @@ export default function Register() {
               <Box>
                 {step === 1 && (
                   <>
-                    <TextField label="First Name" name="firstName" fullWidth margin="normal" value={form.firstName} onChange={handleChange} required autoFocus />
-                    <TextField label="Last Name" name="lastName" fullWidth margin="normal" value={form.lastName} onChange={handleChange} required />
-                    <TextField label="Email" name="email" type="email" fullWidth margin="normal" value={form.email} onChange={handleChange} required />
-                    <TextField
-                      label="Password"
+                    {isGoogleSignup && (
+                      <Fade in timeout={500}>
+                        <Card variant="outlined" sx={{ p: 2, mb: 2, display: 'flex', alignItems: 'center', borderColor: 'primary.main', bgcolor: '#f0f7ff', borderRadius: 3, boxShadow: '0 4px 12px rgba(21, 147, 176, 0.08)' }}>
+                          <Avatar src={form.profilePicture || ''} sx={{ width: 45, height: 45, mr: 2, border: '2px solid #2193b0' }} />
+                          <Box>
+                            <Typography variant="subtitle2" fontWeight={700} color="primary.main">Linked with Google</Typography>
+                            <Typography variant="caption" color="text.secondary">{form.email}</Typography>
+                          </Box>
+                        </Card>
+                      </Fade>
+                    )}
+                    <TextField label="First Name" name="firstName" fullWidth margin="normal" value={form.firstName} onChange={handleChange} required autoFocus disabled={isGoogleSignup} />
+                    <TextField label="Last Name" name="lastName" fullWidth margin="normal" value={form.lastName} onChange={handleChange} required disabled={isGoogleSignup} />
+                    <TextField label="Email" name="email" type="email" fullWidth margin="normal" value={form.email} onChange={handleChange} required disabled={isGoogleSignup} />
+                    {!isGoogleSignup && (
+                      <TextField
+                        label="Password"
                       name="password"
                       type={showPassword ? 'text' : 'password'}
                       fullWidth
@@ -342,6 +446,7 @@ export default function Register() {
                         ),
                       }}
                     />
+                    )}
                     <TextField select label="User Type" name="userType" fullWidth margin="normal" value={form.userType} onChange={handleChange} required>
                       <MenuItem value="patient">Patient</MenuItem>
                       <MenuItem value="doctor">Doctor</MenuItem>
@@ -356,6 +461,14 @@ export default function Register() {
                     >
                       Next
                     </Button>
+                    {!isGoogleSignup && (
+                      <>
+                        <Divider sx={{ my: 3 }}>or</Divider>
+                        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+                          <div id="google-signup-button" style={{ width: '100%', maxWidth: '380px' }} />
+                        </Box>
+                      </>
+                    )}
                     <Box sx={{ mt: 2, textAlign: 'center' }}>
                       <span style={{ color: '#888', fontSize: 15 }}>Already registered? </span>
                       <Button variant="text" color="primary" size="small" sx={{ fontWeight: 700, textTransform: 'none', fontSize: 15, ml: 0.5, p: 0 }} onClick={() => window.location.href = '/auth/login'}>

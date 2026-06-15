@@ -1,4 +1,5 @@
 import type { AppProps } from "next/app";
+import Script from "next/script";
 import { CssBaseline } from "@mui/material";
 import Navbar from "../components/Navbar";
 import { useRouter } from "next/router";
@@ -11,6 +12,7 @@ function MyApp({ Component, pageProps }: AppProps) {
   return (
     <>
       <CssBaseline />
+      <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" />
       
       {showNavbar && <Navbar route={router.pathname} />}
       <div style={{ marginTop: showNavbar ? 64 : 0, minHeight: '100vh' }}>
