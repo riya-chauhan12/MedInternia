@@ -5,7 +5,8 @@ import {
   login,
   getProfile,
   updateProfile,
-  changePassword
+  changePassword,
+  googleAuth
 } from '../controllers/authController';
 import { authenticate } from '../middleware/auth';
 import multer from 'multer';
@@ -36,6 +37,7 @@ router.post('/verify-otp', verifyOtp);
 // Public routes
 router.post('/register', register);
 router.post('/login', login);
+router.post('/google', googleAuth);
 
 // Protected routes (require authentication)
 router.get('/profile', authenticate, getProfile);

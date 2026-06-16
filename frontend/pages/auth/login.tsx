@@ -1,3 +1,5 @@
+import { useState, useEffect } from 'react';
+import { Container, Typography, TextField, Button, Box, Alert, Paper, Divider, IconButton, InputAdornment } from '@mui/material';
 import { useState } from 'react';
 // GSSoC: Added CircularProgress for loading state
 import { Typography, TextField, Button, Box, Alert, Paper, Divider, IconButton, InputAdornment, CircularProgress } from '@mui/material';
@@ -16,6 +18,56 @@ export default function Login() {
   // GSSoC: Loading state for submit button
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+
+  const handleGoogleSuccess = async (response: any) => {
+    try {
+      setError('');
+      const res = await api.post('/auth/google', { credential: response.credential });
+      const token = res.data?.data?.token;
+      const user = res.data?.data?.user;
+      const role = user?.role || user?.userType || '';
+      const userId = user?._id || user?.id || '';
+      
+      localStorage.setItem('token', token);
+      localStorage.setItem('role', role);
+      localStorage.setItem('userId', userId);
+      
+      router.push('/dashboard');
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Google authentication failed');
+    }
+  };
+
+  useEffect(() => {
+    const initializeGoogleSignIn = () => {
+      const google = (window as any).google;
+      if (google && google.accounts && google.accounts.id) {
+        google.accounts.id.initialize({
+          client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+          callback: handleGoogleSuccess,
+        });
+        google.accounts.id.renderButton(
+          document.getElementById('google-signin-button'),
+          { 
+            theme: 'outline', 
+            size: 'large', 
+            width: 336,
+            text: 'continue_with',
+            shape: 'rectangular',
+          }
+        );
+      }
+    };
+
+    const interval = setInterval(() => {
+      if ((window as any).google) {
+        initializeGoogleSignIn();
+        clearInterval(interval);
+      }
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const handleClickShowPassword = () => setShowPassword((show) => !show);
 
@@ -237,6 +289,9 @@ export default function Login() {
           </Button>
         </form>
         <Divider sx={{ my: 3, zIndex: 1, position: 'relative' }}>or</Divider>
+        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2, zIndex: 1, position: 'relative' }}>
+          <div id="google-signin-button" style={{ width: '100%', maxWidth: '336px' }} />
+        </Box>
         <Box textAlign="center" sx={{ zIndex: 1, position: 'relative' }}>
           <Typography variant="body2" sx={{ mb: 1 }}>Don't have an account?</Typography>
           <Button

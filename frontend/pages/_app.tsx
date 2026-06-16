@@ -1,4 +1,6 @@
 import type { AppProps } from "next/app";
+import Script from "next/script";
+import { CssBaseline } from "@mui/material";
 import { CssBaseline, Snackbar, Alert, Typography } from "@mui/material";
 import { useNotifications } from "../hooks/useNotifications";
 import Navbar from "../components/Navbar";
@@ -23,6 +25,12 @@ function MyApp({ Component, pageProps }: AppProps) {
   const showFooter = !hideFooterRoutes.includes(router.pathname);
   return (
     <>
+      <CssBaseline />
+      <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" />
+      
+      {showNavbar && <Navbar route={router.pathname} />}
+      <div style={{ marginTop: showNavbar ? 64 : 0, minHeight: '100vh' }}>
+        <Component {...pageProps} />
       <Head>
         <title>MedInternia</title>
         <link rel="icon" type="image/x-icon" href="/favicon.ico" />
