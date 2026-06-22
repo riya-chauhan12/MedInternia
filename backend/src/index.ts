@@ -14,7 +14,7 @@ import apiRoutes from './routes/api';
 dotenv.config();
 
 const app: Application = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3000;
 
 // Initialize application
 const initializeApp = async () => {
