@@ -7,6 +7,7 @@ import Footer from "../components/Footer";
 import { useRouter } from "next/router";
 import "../styles/globals.css";
 import Head from "next/head";
+import Chatbot from "../components/Chatbot";
 
 function MyApp({ Component, pageProps }: AppProps) {
   const router = useRouter();
@@ -46,6 +47,7 @@ function MyApp({ Component, pageProps }: AppProps) {
         </div>
         {/* GSSoC: Render footer on non-auth pages */}
         {showFooter && <Footer />}
+        <Chatbot />
 
         {/* Real-time notification toast */}
         <Snackbar
