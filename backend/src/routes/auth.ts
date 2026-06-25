@@ -8,6 +8,7 @@ import {
   changePassword
 } from '../controllers/authController';
 import { authenticate } from '../middleware/auth';
+import { otpRequestLimiter, otpVerifyLimiter } from '../middleware/otpRateLimiter';
 import multer from 'multer';
 
 const upload = multer({
@@ -26,12 +27,12 @@ const upload = multer({
 
 const router = Router();
 // Forgot password routes
-router.post('/forgot-password', forgotPassword);
-router.post('/reset-password', resetPassword);
+router.post('/forgot-password', otpRequestLimiter, forgotPassword);
+router.post('/reset-password', otpVerifyLimiter, resetPassword);
 
 // OTP routes
-router.post('/send-otp', sendOtp);
-router.post('/verify-otp', verifyOtp);
+router.post('/send-otp', otpRequestLimiter, sendOtp);
+router.post('/verify-otp', otpVerifyLimiter, verifyOtp);
 
 // Public routes
 router.post('/register', register);

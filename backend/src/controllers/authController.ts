@@ -1,12 +1,66 @@
-import nodemailer from "nodemailer";
-const otpStore: Record<string, string> = {};
-import { Request, Response } from "express";
-import User, { IUser } from "../models/User";
-import { generateToken } from "../utils/jwt";
-import { AuthRequest } from "../middleware/auth";
-import { uploadProfileImage } from "../utils/cloudinary";
+import nodemailer from 'nodemailer';
+import bcrypt from 'bcryptjs';
+import { Request, Response } from 'express';
+import User, { IUser } from '../models/User';
+import Otp from '../models/Otp';
+import { generateToken } from '../utils/jwt';
+import { AuthRequest } from '../middleware/auth';
+import { uploadProfileImage } from '../utils/cloudinary';
 import { asyncHandler } from "../utils/asyncHandler";
 import { AppError } from "../utils/AppError";
+
+// --- OTP configuration -----------------------------------------------------
+const OTP_TTL_MS = 10 * 60 * 1000; // OTP valid for 10 minutes
+const OTP_MAX_ATTEMPTS = 5; // after 5 wrong tries the OTP is invalidated
+
+const generateOtpCode = () => Math.floor(100000 + Math.random() * 900000).toString();
+
+const issueOtp = async (email: string, purpose: 'signup' | 'reset') => {
+  const otp = generateOtpCode();
+  const otpHash = await bcrypt.hash(otp, 10);
+  const expiresAt = new Date(Date.now() + OTP_TTL_MS);
+
+  await Otp.findOneAndUpdate(
+    { email, purpose },
+    { otpHash, expiresAt, attempts: 0 },
+    { upsert: true, new: true, setDefaultsOnInsert: true }
+  );
+
+  return otp;
+};
+
+const consumeOtp = async (
+  email: string,
+  purpose: 'signup' | 'reset',
+  submittedOtp: string
+): Promise<{ valid: boolean; message?: string }> => {
+  const record = await Otp.findOne({ email, purpose });
+
+  if (!record) {
+    return { valid: false, message: 'OTP not found or already used. Please request a new one.' };
+  }
+
+  if (record.expiresAt.getTime() < Date.now()) {
+    await Otp.deleteOne({ _id: record._id });
+    return { valid: false, message: 'OTP has expired. Please request a new one.' };
+  }
+
+  if (record.attempts >= OTP_MAX_ATTEMPTS) {
+    await Otp.deleteOne({ _id: record._id });
+    return { valid: false, message: 'Too many incorrect attempts. Please request a new OTP.' };
+  }
+
+  const isMatch = await bcrypt.compare(submittedOtp, record.otpHash);
+
+  if (!isMatch) {
+    record.attempts += 1;
+    await record.save();
+    return { valid: false, message: 'Invalid OTP' };
+  }
+
+  await Otp.deleteOne({ _id: record._id });
+  return { valid: true };
+};
 
 // Upload profile picture
 export const uploadProfilePicture = asyncHandler(
@@ -190,48 +244,43 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
   });
 });
 
-export const sendOtp = asyncHandler(async (req: Request, res: Response) => {
+export const sendOtp = async (req: Request, res: Response) => {
   const { email } = req.body;
-  if (!email) {
-    throw new AppError("Email required", 400);
-  }
-  // Generate OTP
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  otpStore[email] = otp;
-  // Send OTP via email (simple nodemailer example)
-  const transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST || "smtp.ethereal.email",
-    port: Number(process.env.EMAIL_PORT) || 587,
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-  });
-
+  if (!email) return res.status(400).json({ success: false, message: 'Email required' });
+  const otp = await issueOtp(email, 'signup');
   try {
+    const transporter = nodemailer.createTransport({
+      host: process.env.EMAIL_HOST || 'smtp.ethereal.email',
+      port: Number(process.env.EMAIL_PORT) || 587,
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+      }
+    });
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
       to: email,
-      subject: "MedInternia Email Verification OTP",
-      text: `Your OTP is: ${otp}`,
+      subject: 'MedInternia Email Verification OTP',
+      text: `Your OTP is: ${otp}. It will expire in 10 minutes.`
     });
+    return res.json({ success: true });
   } catch (err) {
-    throw new AppError("Failed to send OTP", 500);
+    console.error('Send OTP email error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to send OTP' });
   }
-
-  res.json({ success: true });
-});
+};
 
 export const verifyOtp = asyncHandler(async (req: Request, res: Response) => {
   const { email, otp } = req.body;
   if (!email || !otp) {
-    throw new AppError("Email and OTP required", 400);
+    throw new AppError('Email and OTP required', 400);
   }
-  if (otpStore[email] === otp) {
-    delete otpStore[email];
-    return res.json({ success: true });
+
+  const result = await consumeOtp(email, 'signup', otp);
+  if (!result.valid) {
+    throw new AppError(result.message || 'Invalid OTP', 400);
   }
-  throw new AppError("Invalid OTP", 400);
+  res.json({ success: true });
 });
 
 // Login user
@@ -396,8 +445,8 @@ export const forgotPassword = asyncHandler(
       throw new AppError("User not found", 404);
     }
     // Generate OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    otpStore[email + "_reset"] = otp;
+    const otp = await issueOtp(email, 'reset');
+
     // Send OTP via email
     const transporter = nodemailer.createTransport({
       host: process.env.EMAIL_HOST || "smtp.ethereal.email",
@@ -413,7 +462,7 @@ export const forgotPassword = asyncHandler(
         from: process.env.EMAIL_USER,
         to: email,
         subject: "MedInternia Password Reset OTP",
-        text: `Your password reset OTP is: ${otp}`,
+        text: `Your password reset OTP is: ${otp}. It will expire in 10 minutes.`,
       });
     } catch (err) {
       throw new AppError("Failed to send OTP", 500);
@@ -433,16 +482,14 @@ export const resetPassword = asyncHandler(
     if (newPassword.length < 6) {
       throw new AppError("Password must be at least 6 characters", 400);
     }
-    if (otpStore[email + "_reset"] !== otp) {
-      throw new AppError("Invalid OTP", 400);
+    const result = await consumeOtp(email, 'reset', otp);
+    if (!result.valid) {
+      return res.status(400).json({ success: false, message: result.message });
     }
     const user = await User.findOne({ email });
-    if (!user) {
-      throw new AppError("User not found", 404);
-    }
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
     user.password = newPassword;
     await user.save();
-    delete otpStore[email + "_reset"];
-    res.json({ success: true, message: "Password reset successfully" });
+    return res.json({ success: true, message: 'Password reset successfully' });
   },
 );
