@@ -1,6 +1,7 @@
 import { useState } from 'react';
 // GSSoC: Added CircularProgress for loading state
 import { Typography, TextField, Button, Box, Alert, Paper, Divider, IconButton, InputAdornment, CircularProgress } from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
 import Link from 'next/link';
 import api from '../../utils/api';
 import { useRouter } from 'next/router';
@@ -58,6 +59,22 @@ export default function Login() {
         position: 'relative',
         overflow: 'hidden',
       }}>
+      <IconButton
+    aria-label="close"
+    onClick={() => router.back()}
+    sx={{
+      position: 'absolute',
+      right: 12,
+      top: 12,
+      color: '#1565c0',
+      zIndex: 2, 
+      '&:hover': {
+        backgroundColor: 'rgba(21, 101, 192, 0.08)',
+      }
+    }}
+  >
+    <CloseIcon />
+  </IconButton>
        <Box
   sx={{
     display: 'flex',
