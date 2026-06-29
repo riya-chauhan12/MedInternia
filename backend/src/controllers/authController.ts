@@ -358,11 +358,19 @@ export const getProfile = async (req: AuthRequest, res: Response) => {
   }
 };
 
+const ALLOWED_UPDATE_FIELDS = [
+  'firstName', 'lastName', 'phone', 'dateOfBirth', 'gender', 'address',
+  'bio', 'profilePicture', 'linkedInProfile', 'githubProfile',
+  'specialization', 'experience', 'qualifications',
+  'medicalSchool', 'yearOfStudy', 'interests', 'mentorDoctor',
+  'academicAchievements', 'careerGoals',
+  'emergencyContact', 'medicalHistory', 'allergies'
+];
+
 // Update user profile
 export const updateProfile = async (req: AuthRequest, res: Response) => {
   try {
     const user = req.user;
-    const updates = req.body;
 
     if (!user) {
       return res.status(401).json({
@@ -371,12 +379,12 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Remove sensitive fields that shouldn't be updated this way
-    delete updates.password;
-    delete updates.email;
-    delete updates.userType;
-    delete updates.isActive;
-    delete updates.isVerified;
+    const updates: Record<string, any> = {};
+    for (const field of ALLOWED_UPDATE_FIELDS) {
+      if (req.body[field] !== undefined) {
+        updates[field] = req.body[field];
+      }
+    }
 
     const updatedUser = await User.findByIdAndUpdate(
       user._id,

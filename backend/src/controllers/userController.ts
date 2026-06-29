@@ -96,6 +96,15 @@ export const getUserProfile = async (req: Request, res: Response) => {
   }
 };
 
+const ALLOWED_UPDATE_FIELDS = [
+  'firstName', 'lastName', 'phone', 'dateOfBirth', 'gender', 'address',
+  'bio', 'profilePicture', 'linkedInProfile', 'githubProfile',
+  'specialization', 'experience', 'qualifications',
+  'medicalSchool', 'yearOfStudy', 'interests', 'mentorDoctor',
+  'academicAchievements', 'careerGoals',
+  'emergencyContact', 'medicalHistory', 'allergies'
+];
+
 // Update user profile
 export const updateUserProfile = async (req: AuthRequest, res: Response) => {
   try {
@@ -110,15 +119,12 @@ export const updateUserProfile = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    const updateData = req.body;
-    
-    // Remove sensitive fields that shouldn't be updated via this endpoint
-    delete updateData.password;
-    delete updateData.email;
-    delete updateData.userType;
-    delete updateData.points;
-    delete updateData.averageRating;
-    delete updateData.isVerified;
+    const updateData: Record<string, any> = {};
+    for (const field of ALLOWED_UPDATE_FIELDS) {
+      if (req.body[field] !== undefined) {
+        updateData[field] = req.body[field];
+      }
+    }
 
     const user = await User.findByIdAndUpdate(
       userId,
