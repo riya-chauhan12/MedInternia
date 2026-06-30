@@ -9,6 +9,8 @@ export interface IUser extends Document {
   lastName: string;
   email: string;
   password: string;
+  loginAttempts?: number;
+  lockoutUntil?: Date | null;
   userType: AppRole;
   phone?: string;
   dateOfBirth?: Date;
@@ -111,8 +113,21 @@ const UserSchema = new Schema<IUser>({
   password: {
     type: String,
     required: [true, 'Password is required'],
-    minlength: [6, 'Password must be at least 6 characters'],
-    select: false // Don't include password in queries by default
+    validate: {
+      validator: function (v: string) {
+        return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$/.test(v);
+      },
+      message: 'Password must be at least 8 characters and contain uppercase, lowercase, digit, and special character'
+    },
+    select: false
+  },
+  loginAttempts: {
+    type: Number,
+    default: 0
+  },
+  lockoutUntil: {
+    type: Date,
+    default: null
   },
   userType: {
     type: String,
@@ -302,7 +317,7 @@ UserSchema.pre('save', async function (next) {
 
   try {
     const salt = await bcrypt.genSalt(12);
-    this.password = await bcrypt.hash(this.password, salt);
+    (this as any).password = await bcrypt.hash((this as any).password, salt);
     next();
   } catch (error) {
     next(error as Error);
@@ -311,7 +326,7 @@ UserSchema.pre('save', async function (next) {
 
 // Compare password method
 UserSchema.methods.comparePassword = async function (candidatePassword: string): Promise<boolean> {
-  return await bcrypt.compare(candidatePassword, this.password);
+  return await bcrypt.compare(candidatePassword, (this as any).password);
 };
 
 // Index for better performance (email and licenseNumber already indexed via unique: true)

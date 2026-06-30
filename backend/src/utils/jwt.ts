@@ -7,15 +7,23 @@ export interface JwtPayload {
   userType: AppRole;
 }
 
-export const generateToken = (payload: JwtPayload): string => {
+export const generateToken = (payload: JwtPayload, rememberMe: boolean = false): string => {
   const secret = process.env.JWT_SECRET;
-  const expiresIn = process.env.JWT_EXPIRE || '7d';
+  const expiresIn = rememberMe ? '7d' : '15m';
 
   if (!secret) {
     throw new Error('JWT_SECRET is not defined in environment variables');
   }
 
   return jwt.sign(payload, secret, { expiresIn });
+};
+
+export const generateRefreshToken = (payload: JwtPayload): string => {
+  const secret = process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('JWT_SECRET is not defined in environment variables');
+  }
+  return jwt.sign(payload, secret, { expiresIn: '7d' });
 };
 
 export const verifyToken = (token: string): JwtPayload | null => {
@@ -25,6 +33,19 @@ export const verifyToken = (token: string): JwtPayload | null => {
     throw new Error('JWT_SECRET is not defined in environment variables');
   }
 
+  try {
+    const decoded = jwt.verify(token, secret) as JwtPayload;
+    return decoded;
+  } catch (error) {
+    return null;
+  }
+};
+
+export const verifyRefreshToken = (token: string): JwtPayload | null => {
+  const secret = process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('JWT_REFRESH_SECRET is not defined in environment variables');
+  }
   try {
     const decoded = jwt.verify(token, secret) as JwtPayload;
     return decoded;

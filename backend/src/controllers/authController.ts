@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import { Request, Response } from 'express';
 import User, { IUser } from '../models/User';
 import Otp from '../models/Otp';
-import { generateToken } from '../utils/jwt';
+import { generateToken, generateRefreshToken } from '../utils/jwt';
 import { AuthRequest } from '../middleware/auth';
 import { uploadProfileImage } from '../utils/cloudinary';
 import { asyncHandler } from "../utils/asyncHandler";
@@ -200,39 +200,18 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
   const user = new User(userData);
   await user.save();
 
-  // Generate JWT token
-  const token = generateToken({
+  // Generate JWT tokens
+  const tokenPayload = {
     userId: (user._id as any).toString(),
     email: user.email,
     userType: user.userType,
-  });
+  };
+  const token = generateToken(tokenPayload);
+  const refreshToken = generateRefreshToken(tokenPayload);
 
   // Remove password from response
   const userResponse = user.toObject() as any;
   delete userResponse.password;
-
-  // If the user is an intern, create notifications for all future webinars
-  if (user.userType === "intern") {
-    const Webinar = require("../models/Webinar").default;
-    const Notification = require("../models/Notification").default;
-    // Find all webinars (past and future)
-    const webinars = await Webinar.find({});
-    const notifications = [];
-    for (const webinar of webinars) {
-      // Populate host for message
-      await webinar.populate("host", "firstName lastName");
-      const host = webinar.host as any;
-      notifications.push({
-        recipient: user._id,
-        message: `New webinar scheduled: ${webinar.title} by Dr. ${host.firstName} ${host.lastName}`,
-        type: "webinar",
-        link: webinar.meetingLink,
-      });
-    }
-    if (notifications.length > 0) {
-      await Notification.insertMany(notifications);
-    }
-  }
 
   res.status(201).json({
     success: true,
@@ -240,6 +219,7 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
     data: {
       user: userResponse,
       token,
+      refreshToken,
     },
   });
 });
@@ -293,7 +273,7 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
   }
 
   // Find user and include password for comparison
-  const user = await User.findOne({ email }).select("+password");
+  const user = await User.findOne({ email }).select("+password +loginAttempts +lockoutUntil");
 
   if (!user) {
     throw new AppError("Invalid email or password", 401);
@@ -304,19 +284,39 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
     throw new AppError("Account is deactivated. Please contact support.", 401);
   }
 
+  // Check account lockout
+  if (user.lockoutUntil && user.lockoutUntil > new Date()) {
+    const remainingMs = user.lockoutUntil.getTime() - Date.now();
+    const remainingMin = Math.ceil(remainingMs / 60000);
+    throw new AppError(`Account is locked. Try again in ${remainingMin} minute(s).`, 429);
+  }
+
   // Compare password
   const isPasswordValid = await user.comparePassword(password);
 
   if (!isPasswordValid) {
+    const newAttempts = (user.loginAttempts || 0) + 1;
+    const update: any = { $inc: { loginAttempts: 1 } };
+    if (newAttempts >= 5) {
+      update.$set = { lockoutUntil: new Date(Date.now() + 15 * 60 * 1000) };
+    }
+    await User.findByIdAndUpdate(user._id, update);
     throw new AppError("Invalid email or password", 401);
   }
 
-  // Generate JWT token
-  const token = generateToken({
+  // Reset login attempts on success
+  await User.findByIdAndUpdate(user._id, {
+    $set: { loginAttempts: 0, lockoutUntil: null }
+  });
+
+  // Generate JWT tokens
+  const tokenPayload = {
     userId: (user._id as any).toString(),
     email: user.email,
     userType: user.userType,
-  });
+  };
+  const token = generateToken(tokenPayload);
+  const refreshToken = generateRefreshToken(tokenPayload);
 
   // Remove password from response
   const userResponse = user.toObject() as any;
@@ -328,6 +328,7 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
     data: {
       user: userResponse,
       token,
+      refreshToken,
     },
   });
 });

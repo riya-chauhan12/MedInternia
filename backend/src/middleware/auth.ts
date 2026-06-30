@@ -1,8 +1,18 @@
 ﻿import { Request, Response, NextFunction } from 'express';
-import { verifyToken, JwtPayload } from '../utils/jwt';
+import { verifyToken, JwtPayload, verifyRefreshToken, generateToken } from '../utils/jwt';
 import User, { IUser } from '../models/User';
 import { getUserRole } from './permissions';
 import type { AppRole } from './permissions';
+
+const tokenBlacklist: Set<string> = new Set();
+
+export const blacklistToken = (token: string) => {
+  tokenBlacklist.add(token);
+};
+
+export const isTokenBlacklisted = (token: string): boolean => {
+  return tokenBlacklist.has(token);
+};
 
 export interface AuthRequest extends Request {
   user?: IUser;
@@ -20,6 +30,13 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
     }
 
     const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+
+    if (isTokenBlacklisted(token)) {
+      return res.status(401).json({
+        success: false,
+        message: 'Token has been revoked'
+      });
+    }
 
     try {
       const decoded = verifyToken(token);

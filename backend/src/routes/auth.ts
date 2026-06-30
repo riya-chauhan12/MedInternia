@@ -8,7 +8,7 @@ import {
   changePassword
 } from '../controllers/authController';
 import { authenticate } from '../middleware/auth';
-import { otpRequestLimiter, otpVerifyLimiter } from '../middleware/otpRateLimiter';
+import { otpRequestLimiter, otpVerifyLimiter, loginLimiter, registerLimiter } from '../middleware/otpRateLimiter';
 import multer from 'multer';
 
 const upload = multer({
@@ -35,8 +35,8 @@ router.post('/send-otp', otpRequestLimiter, sendOtp);
 router.post('/verify-otp', otpVerifyLimiter, verifyOtp);
 
 // Public routes
-router.post('/register', register);
-router.post('/login', login);
+router.post('/register', registerLimiter, register);
+router.post('/login', loginLimiter, login);
 
 // Protected routes (require authentication)
 router.get('/profile', authenticate, getProfile);
