@@ -141,4 +141,25 @@ router.get('/meta/specializations', authenticate, async (req: AuthRequest, res) 
   }
 });
 
+// Get mentees of a doctor
+router.get('/:id/mentees', authenticate, async (req: AuthRequest, res) => {
+  try {
+    const { id } = req.params;
+    const mentees = await User.find({ userType: 'intern', mentorDoctor: id, isActive: true })
+      .select('firstName lastName email medicalSchool yearOfStudy points averageRating streak');
+    res.json({
+      success: true,
+      data: {
+        mentees
+      }
+    });
+  } catch (error) {
+    console.error('Get mentees error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+});
+
 export default router;
