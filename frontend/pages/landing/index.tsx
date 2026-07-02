@@ -728,7 +728,7 @@ const CaseStudyList = () => {
         .finally(() => setLoading(false));
     });
   }, []);
-
+  
   return (
     <div
       style={{
@@ -819,6 +819,25 @@ const RecentCaseStudies = ({ studies }: { studies: any[] }) => {
       </div>
     );
   }
+  const handleShare = async (study: any) => {
+  const shareUrl = `${window.location.origin}/cases/${study._id}`;
+
+  try {
+    if (navigator.share) {
+      await navigator.share({
+        title: study.title,
+        text: `Check out this case study: ${study.title}`,
+        url: shareUrl,
+      });
+    } else {
+      await navigator.clipboard.writeText(shareUrl);
+      alert("Case link copied to clipboard!");
+    }
+  } catch (error) {
+    console.error("Share failed:", error);
+  }
+};
+
 
   // Helper to check if text is long enough to truncate
   const isLong = (text: string) => {
@@ -1044,18 +1063,29 @@ const RecentCaseStudies = ({ studies }: { studies: any[] }) => {
                   </span>
                 </button>
                 {/* Shares */}
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <Share2 size={22} color="#10b981" />
-                  <span
-                    style={{ fontSize: 16, color: "#10b981", fontWeight: 600 }}
-                  >
-                    {typeof study.shares === "number"
-                      ? study.shares
-                      : typeof study.shareCount === "number"
-                      ? study.shareCount
-                      : 0}
-                  </span>
-                </div>
+<button
+  onClick={() => handleShare(study)}
+  style={{
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    background: "transparent",
+    border: "none",
+    cursor: "pointer",
+    padding: 0,
+  }}
+>
+  <Share2 size={22} color="#10b981" />
+  <span
+    style={{ fontSize: 16, color: "#10b981", fontWeight: 600 }}
+  >
+    {typeof study.shares === "number"
+      ? study.shares
+      : typeof study.shareCount === "number"
+      ? study.shareCount
+      : 0}
+  </span>
+</button> 
                 {/* Bookmark/Save */}
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <StarBorderIcon
