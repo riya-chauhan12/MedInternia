@@ -479,6 +479,7 @@ export const getCases = asyncHandler(
       page = 1,
       limit = 10,
       search,
+      sortBy = "newest",
     } = req.query;
 
     const filter: any = { isActive: true, $and: [publicCaseFilter] };
@@ -512,12 +513,31 @@ export const getCases = asyncHandler(
     const limitNum = parseInt(limit as string);
     const skip = (pageNum - 1) * limitNum;
 
-    const cases = await Case.find(filter)
-      .populate("doctor", "firstName lastName specialization")
-      .populate("comments.author", "firstName lastName userType")
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limitNum);
+    let cases;
+    if (sortBy === "most_discussed") {
+      cases = await Case.aggregate([
+        { $match: filter },
+        { $addFields: { commentCount: { $size: { $ifNull: ["$comments", []] } } } },
+        { $sort: { commentCount: -1, createdAt: -1 } },
+        { $skip: skip },
+        { $limit: limitNum }
+      ]);
+      cases = await Case.populate(cases, [
+        { path: "doctor", select: "firstName lastName specialization" },
+        { path: "comments.author", select: "firstName lastName userType" }
+      ]);
+    } else {
+      let sortObj: any = { createdAt: -1 };
+      if (sortBy === "highest_rated") {
+        sortObj = { pointsAwarded: -1, createdAt: -1 };
+      }
+      cases = await Case.find(filter)
+        .populate("doctor", "firstName lastName specialization")
+        .populate("comments.author", "firstName lastName userType")
+        .sort(sortObj)
+        .skip(skip)
+        .limit(limitNum);
+    }
 
     const total = await Case.countDocuments(filter);
 

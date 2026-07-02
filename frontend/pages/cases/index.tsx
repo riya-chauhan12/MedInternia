@@ -16,6 +16,7 @@ import {
 } from "@mui/material";
 import CloseIcon from '@mui/icons-material/Close';
 import CaseCard from '../../components/CaseCard';
+import CaseFilters, { CaseFilterParams } from '../../components/CaseFilters';
 import api from "../../utils/api";
 import Link from "next/link";
 import { canUser } from "../../utils/permissions";
@@ -30,10 +31,17 @@ export default function Cases() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [openDiscussionId, setOpenDiscussionId] = useState<string | null>(null);
   const [canCreateCases, setCanCreateCases] = useState(false);
+  const [filters, setFilters] = useState<CaseFilterParams>({ search: '', specialization: '', sortBy: 'newest' });
 
-  useEffect(() => {
+  const fetchCases = () => {
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (filters.search) params.append("search", filters.search);
+    if (filters.specialization) params.append("specialization", filters.specialization);
+    if (filters.sortBy) params.append("sortBy", filters.sortBy);
+
     api
-      .get("/cases")
+      .get(`/cases?${params.toString()}`)
       .then((res) => {
         setCases(res.data.data.cases || []);
         setLoading(false);
@@ -42,7 +50,13 @@ export default function Cases() {
         setError("Failed to fetch cases");
         setLoading(false);
       });
+  };
 
+  useEffect(() => {
+    fetchCases();
+  }, [filters]);
+
+  useEffect(() => {
     api
       .get("/auth/profile")
       .then((res) => {
@@ -105,6 +119,13 @@ export default function Cases() {
           </Button>
         )}
       </Box>
+
+      <CaseFilters 
+        filters={filters} 
+        onFilterChange={setFilters} 
+        onClearFilters={() => setFilters({ search: '', specialization: '', sortBy: 'newest' })} 
+      />
+
       <Box
         sx={{
           display: "flex",
@@ -114,7 +135,18 @@ export default function Cases() {
         }}
       >
         {cases.length === 0 ? (
-          <Typography>No cases found.</Typography>
+          <Box sx={{ textAlign: 'center', py: 8 }}>
+            <Typography variant="h6" color="text.secondary" gutterBottom>
+              No cases found matching your filters.
+            </Typography>
+            <Button 
+              variant="text" 
+              color="primary" 
+              onClick={() => setFilters({ search: '', specialization: '', sortBy: 'newest' })}
+            >
+              Clear Filters
+            </Button>
+          </Box>
         ) : (
           cases.map((c, i) => (
             <Card key={c._id} sx={{ borderRadius: 4, boxShadow: "0 2px 16px #2193b022", p: 0, overflow: "visible", animation: `slideUp 0.6s ${i * 0.1}s both` }}>
