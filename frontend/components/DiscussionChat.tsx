@@ -30,7 +30,8 @@ const DiscussionChat = () => {
     setLoading(true);
 
     try {
-      const response = await fetch("http://localhost:3000/api/chatbot", {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000';
+      const response = await fetch(`${backendUrl}/api/chatbot`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: userMessage }),

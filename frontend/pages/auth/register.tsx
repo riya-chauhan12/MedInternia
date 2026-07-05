@@ -212,7 +212,8 @@ export default function Register() {
     setVerifyingOtp(true);
     setOtpError('');
     try {
-      const res = await fetch('http://localhost:3000/api/auth/verify-otp', {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000';
+      const res = await fetch(`${backendUrl}/api/auth/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: form.email, otp })
