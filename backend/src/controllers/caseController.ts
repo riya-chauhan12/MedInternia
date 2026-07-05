@@ -860,13 +860,31 @@ export const repostCase = asyncHandler(
     if (!caseDoc || !caseDoc.canRepost) {
       throw new AppError("Repost not allowed", 403);
     }
-    // Duplicate case logic (simplified)
     const newCase = new Case({
-      ...caseDoc.toObject(),
-      _id: undefined,
+      title: caseDoc.title,
+      description: caseDoc.description,
+      symptoms: caseDoc.symptoms,
+      patientInfo: caseDoc.patientInfo,
+      diagnosis: caseDoc.diagnosis,
+      treatment: caseDoc.treatment,
+      images: caseDoc.images,
+      tags: caseDoc.tags,
+      difficulty: caseDoc.difficulty,
+      specialization: caseDoc.specialization,
       doctor: user?._id,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      likes: [],
+      comments: [],
+      followUps: [],
+      pointsAwarded: 0,
+      moderationStatus: "approved",
+      moderationReason: undefined,
+      reviewedBy: undefined,
+      reviewedAt: undefined,
+      moderationAuditTrail: [],
+      aiSuggestions: undefined,
+      isPatientCase: false,
+      isActive: true,
+      canRepost: caseDoc.canRepost,
     });
     await newCase.save();
     res.json({ success: true, case: newCase });
