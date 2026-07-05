@@ -175,6 +175,19 @@ class NERRequest(BaseModel):
     )
 
 
+class BatchNERRequestItem(BaseModel):
+    text: str = Field(
+        ...,
+        min_length=1,
+        max_length=MAX_CHARS,
+        description="Free-text medical case description.",
+    )
+    case_id: str | None = Field(
+        None,
+        description="Optional case identifier — echoed back in the response for easy correlation.",
+    )
+
+
 class EntityItem(BaseModel):
     text: str
     label: str          # SYMPTOM | DISEASE | MEDICATION
@@ -321,7 +334,7 @@ async def extract_entities(req: NERRequest):
 
 
 @app.post("/batch_extract", tags=["ner"])
-async def batch_extract(requests: list[NERRequest]):
+async def batch_extract(requests: list[BatchNERRequestItem]):
     """
     Process up to 20 case descriptions in a single round-trip.
     Each item is processed independently; results are returned in the same order.
@@ -365,6 +378,118 @@ async def batch_extract(requests: list[NERRequest]):
             )
         )
     return out
+
+
+# ---------------------------------------------------------------------------
+# Clinical Sandbox endpoints
+# ---------------------------------------------------------------------------
+import difflib
+import re
+
+class GenerateTestRequest(BaseModel):
+    actual_diagnosis: str
+    test_type: str
+
+class GenerateTestResponse(BaseModel):
+    test_type: str
+    result: str
+
+class EvaluateDiagnosisRequest(BaseModel):
+    proposed_diagnosis: str
+    actual_diagnosis: str
+
+class EvaluateDiagnosisResponse(BaseModel):
+    similarity_score: float
+
+@app.post("/sandbox/generate_test", response_model=GenerateTestResponse, tags=["sandbox"])
+async def generate_sandbox_test(req: GenerateTestRequest):
+    """
+    Generate mock clinical test results based on the actual diagnosis and requested test type.
+    """
+    diag = req.actual_diagnosis.lower()
+    test = req.test_type.lower()
+    
+    result = ""
+    if "ecg" in test or "electrocardiogram" in test:
+        if any(w in diag for w in ["stemi", "myocardial", "infarction", "cardiac", "heart", "coronary"]):
+            result = "ECG shows ST-segment elevation in leads II, III, and aVF, with reciprocal ST depression in leads I and aVL, indicative of an acute inferior wall myocardial infarction (STEMI)."
+        elif any(w in diag for w in ["arrhythmia", "fibrillation", "flutter", "tachycardia"]):
+            result = "ECG shows irregular rhythm with absent P waves and variable ventricular response, consistent with atrial fibrillation."
+        else:
+            result = "ECG shows normal sinus rhythm at 75 bpm, normal PR and QT intervals, and no acute ST-segment or T-wave abnormalities."
+    elif "blood" in test or "lab" in test or "work" in test:
+        if any(w in diag for w in ["stemi", "myocardial", "infarction", "cardiac", "heart"]):
+            result = "Cardiac Troponin I is elevated at 4.2 ng/mL (normal < 0.04 ng/mL). CK-MB is 28 ng/mL (normal < 5.0 ng/mL). BMP and CBC are within normal limits."
+        elif any(w in diag for w in ["diabetes", "diabetic", "hyperglycemia"]):
+            result = "Fasting Blood Glucose is 245 mg/dL (normal 70-100 mg/dL). HbA1c is 8.8% (normal < 5.7%). Electrolytes and kidney function are normal."
+        elif any(w in diag for w in ["infection", "pneumonia", "sepsis", "appendicitis", "meningitis"]):
+            result = "WBC count is elevated at 15,200/mcL (normal 4,500-11,000/mcL) with 88% neutrophils. C-reactive protein (CRP) is elevated at 52 mg/L (normal < 3.0 mg/L)."
+        elif any(w in diag for w in ["anemia", "bleeding", "hemorrhage"]):
+            result = "Hemoglobin is low at 8.5 g/dL (normal 13.5-17.5 g/dL). Hematocrit is 26% (normal 41%-50%). Red blood cell indices show microcytic, hypochromic anemia."
+        else:
+            result = "CBC: WBC 6,800/mcL, Hb 14.5 g/dL, Platelets 240,000/mcL. BMP: Sodium 140 mEq/L, Potassium 4.2 mEq/L, Creatinine 0.8 mg/dL. Glucose 95 mg/dL."
+    elif "x-ray" in test or "xray" in test or "imaging" in test or "radiograph" in test:
+        if any(w in diag for w in ["pneumonia", "infection", "bronchitis", "covid", "cough"]):
+            result = "Chest radiograph reveals dense airspace consolidation and air bronchograms in the right lower lobe, consistent with lobar pneumonia. No pleural effusion."
+        elif any(w in diag for w in ["heart", "stemi", "failure", "cardiac"]):
+            result = "Chest radiograph shows mild cardiomegaly and prominent pulmonary vasculature, but no clear alveolar infiltrates or pleural effusions."
+        elif any(w in diag for w in ["fracture", "bone", "rib", "trauma"]):
+            result = "Radiograph shows a clear disruption of the bony cortex, consistent with an acute fracture. Surrounding soft tissue swelling is noted."
+        else:
+            result = "Chest X-ray shows normal cardiac silhouette size, clear lung fields with no consolidation or pleural effusion, and intact bony thorax."
+    else:
+        # Fallback response
+        result = f"Diagnostic test '{req.test_type}' performed. Findings indicate physiological signs correlated with {req.actual_diagnosis}."
+
+    return GenerateTestResponse(test_type=req.test_type, result=result)
+
+@app.post("/sandbox/evaluate", response_model=EvaluateDiagnosisResponse, tags=["sandbox"])
+async def evaluate_sandbox_diagnosis(req: EvaluateDiagnosisRequest):
+    """
+    Evaluate an intern's proposed diagnosis against the actual diagnosis using string similarity and token overlap.
+    """
+    proposed = req.proposed_diagnosis.lower().strip()
+    actual = req.actual_diagnosis.lower().strip()
+    
+    if proposed == actual:
+        return EvaluateDiagnosisResponse(similarity_score=1.0)
+        
+    if not proposed or not actual:
+        return EvaluateDiagnosisResponse(similarity_score=0.0)
+
+    # Substring check for significant matches
+    if proposed in actual or actual in proposed:
+        if len(proposed) >= 4 or len(actual) >= 4:
+            len_ratio = min(len(proposed), len(actual)) / max(len(proposed), len(actual))
+            score = round(0.7 + 0.3 * len_ratio, 4)
+            return EvaluateDiagnosisResponse(similarity_score=min(1.0, score))
+
+    stop_words = {'a', 'an', 'the', 'of', 'in', 'to', 'for', 'with', 'on', 'at', 'by', 'from', 'and', 'or', 'patient', 'showing', 'acute', 'chronic', 'mild', 'severe', 'moderate'}
+    prop_tokens = [w for w in re.findall(r'\b\w+\b', proposed) if w not in stop_words]
+    act_tokens = [w for w in re.findall(r'\b\w+\b', actual) if w not in stop_words]
+    
+    if not act_tokens or not prop_tokens:
+        ratio = difflib.SequenceMatcher(None, proposed, actual).ratio()
+        return EvaluateDiagnosisResponse(similarity_score=round(ratio, 4))
+        
+    matches = 0.0
+    for at in act_tokens:
+        if at in prop_tokens:
+            matches += 1.0
+            continue
+        for pt in prop_tokens:
+            if at in pt or pt in at:
+                matches += 0.8
+                break
+                
+    coverage = matches / len(act_tokens)
+    jaccard = matches / (len(act_tokens) + len(prop_tokens) - matches) if (len(act_tokens) + len(prop_tokens) - matches) > 0 else 0
+    seq_ratio = difflib.SequenceMatcher(None, proposed, actual).ratio()
+    
+    score = (0.2 * seq_ratio) + (0.3 * jaccard) + (0.5 * coverage)
+    final_score = min(1.0, max(0.0, round(score, 4)))
+    
+    return EvaluateDiagnosisResponse(similarity_score=final_score)
 
 
 # ---------------------------------------------------------------------------
