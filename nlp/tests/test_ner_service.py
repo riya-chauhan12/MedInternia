@@ -60,9 +60,7 @@ def patched_app():
         yield main.app
 
 
-import pytest_asyncio
-
-@pytest_asyncio.fixture
+@pytest.fixture
 async def async_client(patched_app):
     async with AsyncClient(
         transport=ASGITransport(app=patched_app), base_url="http://test"

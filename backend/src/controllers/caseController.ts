@@ -6,9 +6,7 @@ import User from "../models/User";
 import Rating from "../models/Rating";
 import Notification from "../models/Notification";
 import AICasePostSchedule from "../models/AICasePostSchedule";
-import ClinicalSandboxAttempt from "../models/ClinicalSandboxAttempt";
 import { AuthRequest } from "../middleware/auth";
-import { getUserRole, hasPermission } from "../middleware/permissions";
 import {
   buildAICaseSchedule,
   getNextAICasePostDate,
@@ -569,35 +567,10 @@ export const getCases = asyncHandler(
 
     const total = await Case.countDocuments(filter);
 
-    // Sanitize cases list: hide diagnosis and treatment unless they have permission, are the owner, or completed the sandbox
-    const role = getUserRole(req);
-    const hasViewPermission = hasPermission(role, "case:view_diagnosis");
-    const userIdString = req.user?._id?.toString();
-
-    let completedCaseIds: string[] = [];
-    if (req.user?._id) {
-      const completedAttempts = await ClinicalSandboxAttempt.find({
-        user: req.user._id,
-        isCompleted: true,
-      }).select("case");
-      completedCaseIds = completedAttempts.map((a) => a.case.toString());
-    }
-
-    const sanitizedCases = cases.map((c: any) => {
-      const cObj = typeof c.toObject === "function" ? c.toObject() : c;
-      const isOwner = userIdString && cObj.doctor?.toString() === userIdString;
-      const solved = completedCaseIds.includes(cObj._id?.toString() || "");
-      if (!hasViewPermission && !isOwner && !solved) {
-        delete cObj.diagnosis;
-        delete cObj.treatment;
-      }
-      return cObj;
-    });
-
     res.json({
       success: true,
       data: {
-        cases: sanitizedCases,
+        cases,
         pagination: {
           page: pageNum,
           limit: limitNum,
@@ -636,32 +609,10 @@ export const getCaseById = asyncHandler(
       throw new AppError("Case is awaiting moderation", 404);
     }
 
-    // Sanitize case: hide diagnosis and treatment unless they have permission, are the owner, or completed the sandbox
-    let caseObj = caseData.toObject();
-    const role = getUserRole(req);
-    const hasViewPermission = hasPermission(role, "case:view_diagnosis");
-
-    let isCompletedSandbox = false;
-    if (user?._id) {
-      const attempt = await ClinicalSandboxAttempt.findOne({
-        user: user._id,
-        case: id,
-        isCompleted: true,
-      });
-      if (attempt) {
-        isCompletedSandbox = true;
-      }
-    }
-
-    if (!hasViewPermission && !isOwner && !isCompletedSandbox) {
-      delete caseObj.diagnosis;
-      delete caseObj.treatment;
-    }
-
     res.json({
       success: true,
       data: {
-        case: caseObj,
+        case: caseData,
       },
     });
   },
@@ -1314,53 +1265,6 @@ export const getCaseAISuggestions = asyncHandler(
   },
 );
 
-const NER_SERVICE_URL = process.env.NER_SERVICE_URL ?? "http://localhost:8001";
-
-// Start or get clinical sandbox attempt for a case
-export const startClinicalSandbox = asyncHandler(
-  async (req: AuthRequest, res: Response) => {
-    const { id } = req.params;
-    const user = req.user;
-
-    if (!user) {
-      throw new AppError("User not authenticated", 401);
-    }
-
-    const caseData = await Case.findById(id);
-    if (!caseData) {
-      throw new AppError("Case not found", 404);
-    }
-
-    // Find or create sandbox attempt
-    let attempt = await ClinicalSandboxAttempt.findOne({
-      user: user._id,
-      case: id,
-    });
-
-    if (!attempt) {
-      attempt = await ClinicalSandboxAttempt.create({
-        user: user._id,
-        case: id,
-        orderedTests: [],
-        isCompleted: false,
-      });
-    }
-
-    res.json({
-      success: true,
-      data: {
-        attempt,
-      },
-    });
-  }
-);
-
-// Order a virtual diagnostic test
-export const orderSandboxTest = asyncHandler(
-  async (req: AuthRequest, res: Response) => {
-    const { id } = req.params;
-    const { testType } = req.body;
-    const user = req.user;
 // Mark a case as solved
 export const solveCase = asyncHandler(
   async (req: AuthRequest, res: Response) => {
@@ -1371,99 +1275,10 @@ export const solveCase = asyncHandler(
       throw new AppError("User not authenticated", 401);
     }
 
-    if (!testType || typeof testType !== "string") {
-      throw new AppError("testType is required as a string", 400);
-    }
-
     const caseData = await Case.findById(id);
     if (!caseData) {
       throw new AppError("Case not found", 404);
     }
-
-    let attempt = await ClinicalSandboxAttempt.findOne({
-      user: user._id,
-      case: id,
-    });
-
-    if (!attempt) {
-      attempt = await ClinicalSandboxAttempt.create({
-        user: user._id,
-        case: id,
-        orderedTests: [],
-        isCompleted: false,
-      });
-    }
-
-    if (attempt.isCompleted) {
-      throw new AppError("Sandbox attempt already completed", 400);
-    }
-
-    // Check if test was already ordered
-    const alreadyOrdered = attempt.orderedTests.find(
-      (t) => t.testType.toLowerCase() === testType.toLowerCase()
-    );
-
-    if (alreadyOrdered) {
-      return res.json({
-        success: true,
-        message: "Test already ordered",
-        data: {
-          test: alreadyOrdered,
-          attempt,
-        },
-      });
-    }
-
-    // Call FastAPI service to generate mock test result
-    let result = "";
-    try {
-      const response = await fetch(`${NER_SERVICE_URL}/sandbox/generate_test`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          actual_diagnosis: caseData.diagnosis || "normal",
-          test_type: testType,
-        }),
-        signal: AbortSignal.timeout(10_000),
-      });
-
-      if (response.ok) {
-        const body = (await response.json()) as { result: string };
-        result = body.result;
-      } else {
-        result = `Test performed: physiological signs normal for ${testType}.`;
-      }
-    } catch (err) {
-      console.error("Failed to generate test result from NLP service:", err);
-      result = `Test results pending review for ${testType}.`;
-    }
-
-    // Append to ordered tests
-    attempt.orderedTests.push({
-      testType,
-      result,
-      orderedAt: new Date(),
-    });
-
-    await attempt.save();
-
-    res.json({
-      success: true,
-      message: "Virtual test ordered successfully",
-      data: {
-        test: attempt.orderedTests[attempt.orderedTests.length - 1],
-        attempt,
-      },
-    });
-  }
-);
-
-// Submit proposed diagnosis for evaluation and scoring
-export const submitSandboxDiagnosis = asyncHandler(
-  async (req: AuthRequest, res: Response) => {
-    const { id } = req.params;
-    const { proposedDiagnosis } = req.body;
-    const user = req.user;
 
     if (!caseData.isActive) {
       throw new AppError("Case is no longer active", 400);
@@ -1519,93 +1334,6 @@ export const getRecommendedCases = asyncHandler(
       throw new AppError("User not authenticated", 401);
     }
 
-    if (!proposedDiagnosis || typeof proposedDiagnosis !== "string") {
-      throw new AppError("proposedDiagnosis is required as a string", 400);
-    }
-
-    const caseData = await Case.findById(id);
-    if (!caseData) {
-      throw new AppError("Case not found", 404);
-    }
-
-    let attempt = await ClinicalSandboxAttempt.findOne({
-      user: user._id,
-      case: id,
-    });
-
-    if (!attempt) {
-      attempt = await ClinicalSandboxAttempt.create({
-        user: user._id,
-        case: id,
-        orderedTests: [],
-        isCompleted: false,
-      });
-    }
-
-    if (attempt.isCompleted) {
-      throw new AppError("Sandbox attempt already completed", 400);
-    }
-
-    // Call FastAPI service to evaluate proposed diagnosis
-    let similarityScore = 0.0;
-    try {
-      const response = await fetch(`${NER_SERVICE_URL}/sandbox/evaluate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          proposed_diagnosis: proposedDiagnosis,
-          actual_diagnosis: caseData.diagnosis || "",
-        }),
-        signal: AbortSignal.timeout(10_000),
-      });
-
-      if (response.ok) {
-        const body = (await response.json()) as { similarity_score: number };
-        similarityScore = body.similarity_score;
-      } else {
-        similarityScore = 0.5; // fallback
-      }
-    } catch (err) {
-      console.error("Failed to evaluate similarity from NLP service:", err);
-      similarityScore = 0.5; // fallback
-    }
-
-    // Calculate score
-    const baseCompletionPoints = 10;
-    const similarityBonus = Math.round(similarityScore * 20); // max 20 points
-    const testCount = attempt.orderedTests.length;
-    // diagnostic efficiency: start at 10 bonus points, subtract 2 per test ordered
-    const efficiencyBonus = Math.max(0, 10 - 2 * testCount);
-
-    const totalPoints = baseCompletionPoints + similarityBonus + efficiencyBonus;
-
-    attempt.proposedDiagnosis = proposedDiagnosis;
-    attempt.similarityScore = similarityScore;
-    attempt.pointsAwarded = totalPoints;
-    attempt.isCompleted = true;
-
-    await attempt.save();
-
-    // Award points to the user
-    await User.findByIdAndUpdate(user._id, {
-      $inc: {
-        points: totalPoints,
-        casesAnalyzed: 1,
-      },
-    });
-
-    res.json({
-      success: true,
-      message: "Diagnosis submitted and evaluated successfully",
-      data: {
-        similarityScore,
-        pointsAwarded: totalPoints,
-        efficiencyBonus,
-        similarityBonus,
-        actualDiagnosis: caseData.diagnosis,
-        actualTreatment: caseData.treatment,
-        attempt,
-      },
     const userDoc = await User.findById(user._id).populate("solvedCases");
     if (!userDoc) {
       throw new AppError("User not found", 404);
