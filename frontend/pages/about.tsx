@@ -1,6 +1,26 @@
-import { Box, Button, Container, Grid, Paper, Stack, Typography } from "@mui/material";
+import { useState } from "react";
+
+
+import {
+  Box,
+  Button,
+  Collapse,
+  Container,
+  Grid,
+  IconButton,
+  Paper,
+  Stack,
+  Typography,
+} from "@mui/material";
+
 import Link from "next/link";
-import { BookOpen, BriefcaseMedical, HeartPulse, Users } from "lucide-react";
+import {
+  BookOpen,
+  BriefcaseMedical,
+  ChevronDown,
+  HeartPulse,
+  Users,
+} from "lucide-react";
 
 const highlights = [
   {
@@ -20,7 +40,33 @@ const highlights = [
   },
 ];
 
+const aboutSections = [
+  {
+    id: "mission",
+    title: "Our Mission",
+    content:
+      "MedInternia is committed to making medical education more collaborative through case discussions, peer learning, and career opportunities for aspiring healthcare professionals.",
+  },
+  {
+    id: "vision",
+    title: "Our Vision",
+    content:
+      "To build a supportive medical learning community where students, interns, and doctors can learn, connect, and grow together.",
+  },
+  {
+    id: "community",
+    title: "Our Community",
+    content:
+      "Join thousands of learners sharing knowledge, participating in webinars, discussing real-world cases, and building their professional network.",
+  },
+];
+
 export default function AboutPage() {
+    const [openSection, setOpenSection] = useState<string | null>(null);
+
+  const handleToggle = (id: string) => {
+    setOpenSection((prev) => (prev === id ? null : id));
+  };
   return (
     <Box sx={{ flex: 1, background: "linear-gradient(120deg, #e0eafc 0%, #f8f9fa 100%)", py: { xs: 6, md: 10 } }}>
       <Container maxWidth="lg">
@@ -100,6 +146,70 @@ export default function AboutPage() {
               </Grid>
             ))}
           </Grid>
+          <Box sx={{ mt: 2 }}>
+  <Typography
+    variant="h4"
+    fontWeight={800}
+    color="#0072ff"
+    sx={{ mb: 3, textAlign: "center" }}
+  >
+    Learn More About MedInternia
+  </Typography>
+
+  <Stack spacing={2}>
+    {aboutSections.map((section) => (
+      <Paper
+        key={section.id}
+        elevation={0}
+        sx={{
+          borderRadius: 3,
+          border: "1px solid rgba(33,147,176,0.12)",
+          boxShadow: "0 6px 18px rgba(33,147,176,0.08)",
+          overflow: "hidden",
+        }}
+      >
+        <Box
+          onClick={() => handleToggle(section.id)}
+          sx={{
+            p: 3,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            cursor: "pointer",
+          }}
+        >
+          <Typography variant="h6" fontWeight={700}>
+            {section.title}
+          </Typography>
+
+          <IconButton>
+            <ChevronDown
+              size={22}
+              style={{
+                transition: "0.3s",
+                transform:
+                  openSection === section.id
+                    ? "rotate(180deg)"
+                    : "rotate(0deg)",
+              }}
+            />
+          </IconButton>
+        </Box>
+
+        <Collapse in={openSection === section.id}>
+          <Box sx={{ px: 3, pb: 3 }}>
+            <Typography
+              color="text.secondary"
+              sx={{ lineHeight: 1.8 }}
+            >
+              {section.content}
+            </Typography>
+          </Box>
+        </Collapse>
+      </Paper>
+    ))}
+  </Stack>
+</Box>
         </Stack>
       </Container>
     </Box>
