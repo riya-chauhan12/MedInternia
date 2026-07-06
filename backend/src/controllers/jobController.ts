@@ -148,15 +148,22 @@ export const getJobOpportunityById = async (req: Request, res: Response) => {
   }
 };
 
-// Update job opportunity
+// Fields a job owner is allowed to edit via updateJobOpportunity.
+// System-managed fields such as postedBy, applicants, and applications
+// are intentionally excluded from this allow-list.
+const JOB_UPDATABLE_FIELDS = [
+  'title', 'company', 'location', 'type', 'specialization',
+  'description', 'requirements', 'salary', 'applicationDeadline',
+  'contactEmail', 'externalUrl', 'isActive'
+] as const;
+
 export const updateJobOpportunity = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const updateData = req.body;
     const userId = (req.user!._id as any).toString();
 
     const jobOpportunity = await JobOpportunity.findOne({
-      _id: id,
+      _id: id, 
       postedBy: userId
     });
 
@@ -166,8 +173,12 @@ export const updateJobOpportunity = async (req: AuthRequest, res: Response) => {
         message: 'Job opportunity not found or you are not authorized to update it'
       });
     }
-
-    Object.assign(jobOpportunity, updateData);
+    
+    for (const field of JOB_UPDATABLE_FIELDS) {
+      if (req.body[field] !== undefined) {
+        (jobOpportunity as any)[field] = req.body[field];
+      }
+    }
     await jobOpportunity.save();
     await jobOpportunity.populate('postedBy', 'firstName lastName specialization');
 
