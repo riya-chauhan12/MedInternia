@@ -16,6 +16,7 @@ quickly without downloading any model weights.
 from __future__ import annotations
 
 import pytest
+import pytest_asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 from httpx import AsyncClient, ASGITransport
 
@@ -60,7 +61,7 @@ def patched_app():
         yield main.app
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def async_client(patched_app):
     async with AsyncClient(
         transport=ASGITransport(app=patched_app), base_url="http://test"
@@ -320,3 +321,44 @@ def test_canonical_label_rejects_substring_false_positives():
     assert _canonical_label("DRUG_STORE") is None
     assert _canonical_label("DRUG_TRIAL") is None
     assert _canonical_label("PRODRUG") is None
+
+
+@pytest.mark.asyncio
+async def test_compliance_check_endpoint(async_client):
+    # Test PHI Redaction: name, email, phone
+    payload = {
+        "text": "The patient named Bob Smith, email bob@smith.com, phone +1 555-123-4567, SSN 123-45-6789. Also Mr. Jones.",
+        "patient_age": 45
+    }
+    resp = await async_client.post("/compliance/check", json=payload)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "[REDACTED]" in data["redacted_text"]
+    assert "Bob Smith" not in data["redacted_text"]
+    assert "bob@smith.com" not in data["redacted_text"]
+    assert "555-123-4567" not in data["redacted_text"]
+    assert "123-45-6789" not in data["redacted_text"]
+    assert "Jones" not in data["redacted_text"]
+    assert data["is_flagged"] is False
+
+    # Test Pediatric Contraindication (Aspirin under 18)
+    payload_peds = {
+        "text": "We should prescribe Aspirin for this patient.",
+        "patient_age": 10
+    }
+    resp_peds = await async_client.post("/compliance/check", json=payload_peds)
+    assert resp_peds.status_code == 200
+    data_peds = resp_peds.json()
+    assert data_peds["is_flagged"] is True
+    assert any("Reye's syndrome" in r for r in data_peds["flag_reasons"])
+
+    # Test Dosage Discrepancy (Paracetamol 5000 mg)
+    payload_dose = {
+        "text": "Suggest Paracetamol 5000 mg daily.",
+        "patient_age": 35
+    }
+    resp_dose = await async_client.post("/compliance/check", json=payload_dose)
+    assert resp_dose.status_code == 200
+    data_dose = resp_dose.json()
+    assert data_dose["is_flagged"] is True
+    assert any("exceeds the maximum recommended daily limit" in r for r in data_dose["flag_reasons"])

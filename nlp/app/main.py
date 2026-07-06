@@ -27,6 +27,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import re
 import time
 from contextlib import asynccontextmanager
 from typing import Any
@@ -175,6 +176,30 @@ class NERRequest(BaseModel):
     )
 
 
+class BatchNERRequest(BaseModel):
+    text: str = Field(
+        ...,
+        max_length=MAX_CHARS,
+        description="Free-text medical case description.",
+    )
+    case_id: str | None = Field(
+        None,
+        description="Optional case identifier.",
+    )
+
+
+class ComplianceCheckRequest(BaseModel):
+    text: str
+    patient_age: float | None = None
+
+
+class ComplianceCheckResponse(BaseModel):
+    original_text: str
+    redacted_text: str
+    is_flagged: bool
+    flag_reasons: list[str]
+
+
 class EntityItem(BaseModel):
     text: str
     label: str          # SYMPTOM | DISEASE | MEDICATION
@@ -321,7 +346,7 @@ async def extract_entities(req: NERRequest):
 
 
 @app.post("/batch_extract", tags=["ner"])
-async def batch_extract(requests: list[NERRequest]):
+async def batch_extract(requests: list[BatchNERRequest]):
     """
     Process up to 20 case descriptions in a single round-trip.
     Each item is processed independently; results are returned in the same order.
@@ -338,6 +363,8 @@ async def batch_extract(requests: list[NERRequest]):
     sem = _batch_semaphore or asyncio.Semaphore(BATCH_SEMAPHORE_LIMIT)
 
     async def _run_with_semaphore(text: str) -> list[EntityItem]:
+        if len(text.strip()) < 5:
+            return []
         async with sem:
             return await asyncio.wait_for(
                 loop.run_in_executor(None, _run_ner_sync, text),
@@ -365,6 +392,140 @@ async def batch_extract(requests: list[NERRequest]):
             )
         )
     return out
+
+
+# ---------------------------------------------------------------------------
+# Compliance Checking Logic (PHI Redaction & Discrepancy Checks)
+# ---------------------------------------------------------------------------
+
+_nlp_spacy = None
+try:
+    import spacy
+    _nlp_spacy = spacy.load("en_core_web_sm")
+except Exception:
+    pass
+
+def redact_phi(text: str) -> str:
+    # 1. Redact Emails
+    email_pattern = r"\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b"
+    text = re.sub(email_pattern, "[REDACTED]", text)
+    
+    # 2. Redact Phone numbers
+    phone_pattern = r"\b(?:\+?1[-. ]?)?\(?\d{3}\)?[-. ]?\d{3}[-. ]?\d{4}\b"
+    text = re.sub(phone_pattern, "[REDACTED]", text)
+    
+    # 3. Redact SSNs
+    ssn_pattern = r"\b\d{3}-\d{2}-\d{4}\b"
+    text = re.sub(ssn_pattern, "[REDACTED]", text)
+    
+    # 4. Redact Patient names using spacy if available
+    if _nlp_spacy is not None:
+        try:
+            doc = _nlp_spacy(text)
+            spans = sorted(doc.ents, key=lambda e: e.start_char, reverse=True)
+            text_list = list(text)
+            for span in spans:
+                if span.label_ == "PERSON":
+                    text_list[span.start_char:span.end_char] = list("[REDACTED]")
+            text = "".join(text_list)
+        except Exception:
+            pass
+            
+    # Regex fallback/additional name redactor
+    title_pattern = r"\b(Mr\.|Mrs\.|Ms\.|Miss)\s+([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)?)\b"
+    text = re.sub(title_pattern, r"\1 [REDACTED]", text)
+    
+    patient_name_pattern = r"\b(patient\s+named\s+|patient\s+is\s+|patient\s+name\s+is\s+)([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)?)\b"
+    text = re.sub(patient_name_pattern, r"\1[REDACTED]", text)
+    
+    return text
+
+def check_discrepancies(text: str, patient_age: float | None) -> list[str]:
+    reasons = []
+    text_lower = text.lower()
+    
+    # 1. Pediatric contraindications (if age < 18)
+    if patient_age is not None and patient_age < 18:
+        if "aspirin" in text_lower or "acetylsalicylic acid" in text_lower:
+            reasons.append("Pediatric contraindication: Aspirin is contraindicated in patients under 18 due to risk of Reye's syndrome.")
+        if "tetracycline" in text_lower or "doxycycline" in text_lower:
+            reasons.append("Pediatric contraindication: Tetracyclines/Doxycycline are contraindicated in patients under 18 due to risk of tooth discoloration.")
+        if "ciprofloxacin" in text_lower or "levofloxacin" in text_lower or "moxifloxacin" in text_lower:
+            reasons.append("Pediatric contraindication: Fluoroquinolones are contraindicated in patients under 18 due to risk of arthropathy.")
+        if "codeine" in text_lower:
+            reasons.append("Pediatric contraindication: Codeine is contraindicated in patients under 18 due to risk of severe respiratory depression.")
+
+    # 2. Dosage checks
+    dosage_rules = [
+        {
+            "names": ["paracetamol", "acetaminophen", "tylenol"],
+            "max_mg": 4000,
+            "display": "Paracetamol/Acetaminophen"
+        },
+        {
+            "names": ["ibuprofen", "advil", "motrin"],
+            "max_mg": 3200,
+            "display": "Ibuprofen"
+        },
+        {
+            "names": ["aspirin", "acetylsalicylic acid"],
+            "max_mg": 4000,
+            "display": "Aspirin"
+        }
+    ]
+    
+    for rule in dosage_rules:
+        if any(name in text_lower for name in rule["names"]):
+            for name in rule["names"]:
+                matches = re.finditer(rf'\b{name}\b.*?\b(\d+(?:\.\d+)?)\s*(mg|g)\b', text_lower, re.DOTALL)
+                for match in matches:
+                    try:
+                        if len(match.group(0)) > 100:
+                            continue
+                        val = float(match.group(1))
+                        unit = match.group(2)
+                        val_mg = val * 1000 if unit == "g" else val
+                        if val_mg > rule["max_mg"]:
+                            reasons.append(f"Dosage discrepancy: {rule['display']} dosage of {val} {unit} exceeds the maximum recommended daily limit of {rule['max_mg']} mg.")
+                    except ValueError:
+                        continue
+                
+                matches = re.finditer(rf'\b(\d+(?:\.\d+)?)\s*(mg|g)\b.*?\b{name}\b', text_lower, re.DOTALL)
+                for match in matches:
+                    try:
+                        if len(match.group(0)) > 100:
+                            continue
+                        val = float(match.group(1))
+                        unit = match.group(2)
+                        val_mg = val * 1000 if unit == "g" else val
+                        if val_mg > rule["max_mg"]:
+                            reasons.append(f"Dosage discrepancy: {rule['display']} dosage of {val} {unit} exceeds the maximum recommended daily limit of {rule['max_mg']} mg.")
+                    except ValueError:
+                        continue
+                        
+    return reasons
+
+
+@app.post("/compliance/check", response_model=ComplianceCheckResponse, tags=["compliance"])
+async def compliance_check(req: ComplianceCheckRequest):
+    """
+    Check case content or comment for PHI redaction and dosage/pediatric discrepancies.
+    """
+    if not req.text.strip():
+        return ComplianceCheckResponse(
+            original_text=req.text,
+            redacted_text=req.text,
+            is_flagged=False,
+            flag_reasons=[]
+        )
+    redacted = redact_phi(req.text)
+    reasons = check_discrepancies(req.text, req.patient_age)
+    return ComplianceCheckResponse(
+        original_text=req.text,
+        redacted_text=redacted,
+        is_flagged=len(reasons) > 0,
+        flag_reasons=reasons
+    )
 
 
 # ---------------------------------------------------------------------------

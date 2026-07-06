@@ -1,4 +1,5 @@
 import mongoose, { Document, Schema } from 'mongoose';
+import { checkCompliance } from '../services/nerService';
 
 export interface IComment extends Document {
   author: mongoose.Types.ObjectId;
@@ -9,6 +10,9 @@ export interface IComment extends Document {
   ratedBy: mongoose.Types.ObjectId[]; // Array of users who rated
   rating?: number; // Average rating (optional)
   pinned?: boolean; // Indicates if the comment is pinned
+  isFlagged?: boolean;
+  flagReasons?: string[];
+  moderationStatus?: 'pending' | 'approved' | 'rejected';
   createdAt: Date;
   updatedAt: Date;
 }
@@ -98,6 +102,18 @@ const CommentSchema = new Schema<IComment>({
   pinned: {
     type: Boolean,
     default: false
+  },
+  isFlagged: {
+    type: Boolean,
+    default: false
+  },
+  flagReasons: [{
+    type: String
+  }],
+  moderationStatus: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'approved'
   }
 }, {
   timestamps: true
@@ -275,6 +291,48 @@ const CaseSchema = new Schema<ICase>({
   }
 }, {
   timestamps: true
+});
+
+// Pre-save hook to audit title, description, and comments
+CaseSchema.pre('save', async function(next) {
+  const caseDoc = this;
+
+  // 1. Audit case title or description if modified
+  try {
+    if (caseDoc.isModified('title') && caseDoc.title) {
+      const res = await checkCompliance(caseDoc.title, caseDoc.patientInfo?.age);
+      caseDoc.title = res.redacted_text;
+    }
+    if (caseDoc.isModified('description') && caseDoc.description) {
+      const res = await checkCompliance(caseDoc.description, caseDoc.patientInfo?.age);
+      caseDoc.description = res.redacted_text;
+    }
+  } catch (err) {
+    console.error('Compliance check failed for Case title/description:', err);
+  }
+
+  // 2. Audit new or modified comments
+  for (const comment of caseDoc.comments) {
+    if (comment.isNew || comment.isModified('content')) {
+      try {
+        const res = await checkCompliance(comment.content, caseDoc.patientInfo?.age);
+        comment.content = res.redacted_text;
+        if (res.is_flagged) {
+          comment.isFlagged = true;
+          comment.flagReasons = res.flag_reasons;
+          comment.moderationStatus = 'pending';
+        } else {
+          comment.isFlagged = false;
+          comment.flagReasons = [];
+          comment.moderationStatus = 'approved';
+        }
+      } catch (err) {
+        console.error('Compliance check failed for Comment:', err);
+      }
+    }
+  }
+
+  next();
 });
 
 // Indexes for better performance

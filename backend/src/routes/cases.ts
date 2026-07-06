@@ -27,7 +27,9 @@ import {
   likeComment,
   rateComment,
   solveCase,
-  getRecommendedCases
+  getRecommendedCases,
+  getFlaggedComments,
+  moderateComment
 } from '../controllers/caseController';
 import { authenticate, optionalAuthenticate } from '../middleware/auth';
 import { requirePermission } from '../middleware/permissions';
@@ -40,6 +42,7 @@ router.get('/', optionalAuthenticate, getCases);
 router.get('/my/cases', authenticate, getMyCases);
 router.post('/:id/solve', authenticate, solveCase);
 router.get('/moderation/queue', authenticate, requirePermission('comment:moderate'), getCaseModerationQueue);
+router.get('/comments/moderation/queue', authenticate, requirePermission('comment:moderate'), getFlaggedComments);
 router.get('/ai-posts/my', authenticate, getMyAICaseSchedules);
 
 // Permission-guarded case management routes
@@ -51,6 +54,7 @@ router.get('/:id', optionalAuthenticate, getCaseById);
 router.put('/:id', authenticate, requirePermission('case:update'), updateCase);
 router.delete('/:id', authenticate, requirePermission('case:delete'), deleteCase);
 router.patch('/:id/moderation', authenticate, requirePermission('comment:moderate'), moderateCase);
+router.patch('/:caseId/comments/:commentId/moderation', authenticate, requirePermission('comment:moderate'), moderateComment);
 
 // Permission-guarded interactive routes
 router.post('/:id/comments', authenticate, requirePermission('comment:create'), addComment);

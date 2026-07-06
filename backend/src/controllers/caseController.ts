@@ -599,7 +599,6 @@ export const getCaseById = asyncHandler(
     if (!caseData.isActive) {
       throw new AppError("Case is no longer available", 404);
     }
-
     const user = req.user as { _id?: string; userType?: string } | undefined;
     const isOwner =
       user?._id && caseData.doctor.toString() === user._id.toString();
@@ -609,10 +608,17 @@ export const getCaseById = asyncHandler(
       throw new AppError("Case is awaiting moderation", 404);
     }
 
+    const caseObj = caseData.toObject();
+    if (!user || !canModerateComments(user.userType)) {
+      caseObj.comments = caseObj.comments.filter(
+        (c: any) => c.moderationStatus !== 'pending'
+      );
+    }
+
     res.json({
       success: true,
       data: {
-        case: caseData,
+        case: caseObj,
       },
     });
   },
@@ -1401,4 +1407,94 @@ export const getRecommendedCases = asyncHandler(
       }
     });
   }
+);
+
+// Get comment moderation queue (flagged comments)
+export const getFlaggedComments = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const user = req.user as { userType?: string };
+    if (!canModerateComments(user?.userType)) {
+      throw new AppError(
+        "Only moderators, admins, and doctors can view the comment moderation queue",
+        403,
+      );
+    }
+
+    // Find cases that have comments with isFlagged: true
+    const casesWithFlaggedComments = await Case.find({
+      "comments.isFlagged": true,
+      isActive: true,
+    })
+      .populate("comments.author", "firstName lastName userType")
+      .populate("doctor", "firstName lastName");
+
+    // Extract all flagged comments with case details
+    const flaggedComments: any[] = [];
+    for (const c of casesWithFlaggedComments) {
+      for (const comment of c.comments) {
+        if (comment.isFlagged && comment.moderationStatus === "pending") {
+          flaggedComments.push({
+            caseId: c._id,
+            caseTitle: c.title,
+            comment: comment,
+          });
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      data: {
+        comments: flaggedComments,
+      },
+    });
+  },
+);
+
+// Moderate a flagged comment
+export const moderateComment = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const user = req.user as { userType?: string };
+    if (!canModerateComments(user?.userType)) {
+      throw new AppError(
+        "Only moderators, admins, and doctors can moderate comments",
+        403,
+      );
+    }
+
+    const { caseId, commentId } = req.params;
+    const { status } = req.body; // 'approved' or 'rejected'
+
+    if (!["approved", "rejected"].includes(status)) {
+      throw new AppError("Status must be approved or rejected", 400);
+    }
+
+    const caseDoc = await Case.findById(caseId);
+    if (!caseDoc) {
+      throw new AppError("Case not found", 404);
+    }
+
+    const comment = caseDoc.comments.find(
+      (c: any) => c._id?.toString() === commentId,
+    );
+    if (!comment) {
+      throw new AppError("Comment not found", 404);
+    }
+
+    comment.moderationStatus = status;
+    if (status === "approved") {
+      comment.isFlagged = false;
+    } else {
+      comment.content = "[Removed by moderator]";
+      comment.isFlagged = false;
+    }
+
+    await caseDoc.save();
+
+    res.json({
+      success: true,
+      message: `Comment successfully ${status}`,
+      data: { comment },
+    });
+  },
 );
