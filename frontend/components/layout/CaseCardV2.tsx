@@ -66,7 +66,9 @@ function getOwnerName(caseData: CaseCardData): string {
 
 export default function CaseCardV2({ caseData, onViewDetails, href }: CaseCardV2Props) {
   const specialty = caseData.specialization || caseData.specialty || 'General';
-  const difficulty = caseData.difficulty || 'Intermediate';
+  const difficulty = caseData.difficulty
+  ? caseData.difficulty.charAt(0).toUpperCase() + caseData.difficulty.slice(1).toLowerCase()
+  : 'Intermediate';
   const diffStyle = difficultyColors[difficulty] || difficultyColors.Intermediate;
   const topics = caseData.key_topics?.length
     ? caseData.key_topics
@@ -76,6 +78,15 @@ export default function CaseCardV2({ caseData, onViewDetails, href }: CaseCardV2
   const detailHref = href || `/cases/${caseData._id}`;
   const ownerName = getOwnerName(caseData);
   const dateLabel = formatDate(caseData.createdAt);
+  const readingTime = Math.max(
+  1,
+  Math.ceil(
+    ((caseData.description ?? "")
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean).length) / 200
+  )
+);
 
   return (
     <Card
@@ -94,6 +105,16 @@ export default function CaseCardV2({ caseData, onViewDetails, href }: CaseCardV2
     >
       <CardContent sx={{ flex: 1, p: { xs: 2, sm: 2.5 } }}>
         <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mb: 1.5 }}>
+          <Chip
+  label={`⏱ ${readingTime} min read`}
+  size="small"
+  variant="outlined"
+  sx={{
+    borderRadius: "8px",
+    fontWeight: 500,
+    bgcolor: "#f5f5f5",
+  }}
+/>
           <Chip
             icon={<Stethoscope size={14} />}
             label={specialty}
