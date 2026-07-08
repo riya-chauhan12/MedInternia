@@ -158,6 +158,40 @@ MedInternia/
 └── package.json
 ```
 
+## 📁 Folder Structure
+MedInternia/
+│
+├── backend/          # Node.js + Express API (port 3000)
+├── frontend/         # Next.js frontend (port 3001)
+├── docs/             # Architecture documentation
+│   └── ai-nlp-integration.md   # AI/NLP module plan
+├── requirements.txt  # Python dependencies (for future NLP module)
+├── README.md
+└── package.json
+
+> **Note on `requirements.txt`:** This file is a placeholder for the planned
+> Python NLP microservice. See `docs/ai-nlp-integration.md` for the implementation
+> plan and `backend/.env.example` for the `NLP_SERVICE_URL` configuration.
+Also update the "Getting Started" section to add:
+markdown## 4️⃣ Start Development Servers
+
+### Backend
+```bash
+cd backend
+npm run dev
+```
+
+### Frontend
+```bash
+cd frontend  
+npm run dev
+```
+
+### NLP Service (Optional — only needed for AI Suggestions feature)
+> ⚠️ The NLP module is **not yet implemented**. The AI-Powered Suggestions feature
+> is currently planned. See [docs/ai-nlp-integration.md](docs/ai-nlp-integration.md)
+> for the implementation roadmap.
+
 ---
 
 # ⚡ Getting Started
