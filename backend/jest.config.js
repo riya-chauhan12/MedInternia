@@ -9,4 +9,5 @@ module.exports = {
     ...tsJestTransformCfg,
   },
   testPathIgnorePatterns: ["<rootDir>/dist/"],
+  setupFiles: ["<rootDir>/jest.setup.js"],
 };
