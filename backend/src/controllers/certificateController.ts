@@ -157,9 +157,10 @@ export const getUserCertificates = async (req: Request, res: Response) => {
 };
 
 // Get certificate by ID (for verification)
-export const getCertificateById = async (req: Request, res: Response) => {
+export const getCertificateById = async (req: AuthRequest, res: Response) => {
   try {
     const { certificateId } = req.params;
+    const requester = req.user!;
 
     const certificate = await Certificate.findOne({ certificateId })
       .populate('intern', 'firstName lastName email')
@@ -172,13 +173,48 @@ export const getCertificateById = async (req: Request, res: Response) => {
       });
     }
 
+    const internId = (certificate.intern as any)._id.toString();
+    const doctorId = (certificate.doctor as any)._id.toString();
+    const requesterId = (requester._id as any).toString();
+
+    const isOwnerOrIssuer =
+      requesterId === internId ||
+      requesterId === doctorId ||
+      requester.userType === 'admin';
+
     // Increment download count
     certificate.downloadCount += 1;
     await certificate.save();
 
+    if (isOwnerOrIssuer) {
+      // Full detail view for the intern who owns it, the doctor who issued it, or an admin
+      return res.json({
+        success: true,
+        data: {
+          certificate,
+          isRevoked: !certificate.isVerified
+        }
+      });
+    }
+
+    // Anyone else gets a limited, public-safe payload — no email, and revoked status is explicit
     res.json({
       success: true,
-      data: { certificate }
+      data: {
+        certificate: {
+          certificateId: certificate.certificateId,
+          title: certificate.title,
+          intern: {
+            firstName: (certificate.intern as any).firstName,
+            lastName: (certificate.intern as any).lastName
+          },
+          doctor: certificate.doctor,
+          casesReviewed: certificate.casesReviewed,
+          pointsEarned: certificate.pointsEarned,
+          issuedAt: certificate.createdAt
+        },
+        isRevoked: !certificate.isVerified
+      }
     });
   } catch (error) {
     console.error('Get certificate error:', error);

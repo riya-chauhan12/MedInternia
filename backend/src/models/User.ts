@@ -12,6 +12,7 @@ export interface IUser extends Document {
   password: string;
   passwordResetToken?: string;
 passwordResetExpires?: Date;
+  passwordChangedAt?: Date;
   loginAttempts?: number;
   lockoutUntil?: Date | null;
   userType: AppRole;
@@ -135,6 +136,10 @@ passwordResetExpires: {
   type: Date,
   select: false
 },
+  passwordChangedAt: {
+    type: Date,
+    select: false
+  },
   loginAttempts: {
     type: Number,
     default: 0

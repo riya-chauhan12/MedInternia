@@ -53,7 +53,7 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
         });
       }
       
-      const user = await User.findById(decoded.userId).select('-password');
+      const user = await User.findById(decoded.userId).select('-password +passwordChangedAt');
       
       if (!user) {
         return res.status(401).json({
@@ -66,6 +66,17 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
         return res.status(401).json({
           success: false,
           message: 'Account is deactivated'
+        });
+      }
+
+      if (
+        user.passwordChangedAt &&
+        typeof decoded.iat === 'number' &&
+        decoded.iat < Math.floor(user.passwordChangedAt.getTime() / 1000)
+      ) {
+        return res.status(401).json({
+          success: false,
+          message: 'Password was changed. Please log in again.'
         });
       }
 

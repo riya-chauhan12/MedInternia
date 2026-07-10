@@ -446,6 +446,7 @@ export const changePassword = asyncHandler(
 
     // Update password
     userWithPassword.password = newPassword;
+    userWithPassword.passwordChangedAt = new Date();
     await userWithPassword.save();
 
     res.json({
@@ -510,6 +511,7 @@ export const resetPassword = asyncHandler(
       throw new AppError("User not found", 404);
     }
     user.password = newPassword;
+    user.passwordChangedAt = new Date();
     await user.save();
     return res.json({ success: true, message: 'Password reset successfully' });
   },
