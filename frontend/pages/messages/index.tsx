@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/router';
 import {
-  Container, Box, Typography, Grid, List, ListItem, ListItemText, ListItemAvatar,
+  Container, Box, Typography, Grid, List, ListItem, ListItemButton, ListItemText, ListItemAvatar,
   Avatar, TextField, Button, Paper, Divider, CircularProgress, Alert
 } from '@mui/material';
 import api from '../../utils/api';
@@ -217,8 +217,7 @@ export default function MessagesPage() {
                 
                 return (
                   <React.Fragment key={conv._id}>
-                    <ListItem 
-                      button 
+                    <ListItemButton 
                       onClick={() => handleSelectConversation(conv._id)}
                       sx={{ bgcolor: isSelected ? 'action.selected' : 'transparent' }}
                     >
@@ -234,7 +233,7 @@ export default function MessagesPage() {
                           sx: { color: isSelected ? 'text.primary' : 'text.secondary' }
                         }}
                       />
-                    </ListItem>
+                    </ListItemButton>
                     <Divider />
                   </React.Fragment>
                 );
