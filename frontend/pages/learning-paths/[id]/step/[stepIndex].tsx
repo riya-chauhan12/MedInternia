@@ -4,7 +4,6 @@ import {
   LinearProgress, Radio, RadioGroup, FormControlLabel, FormControl,
   Breadcrumbs, Link, Alert, Divider
 } from '@mui/material';
-import Layout from '../../../../components/layout/Layout';
 import api from '../../../../utils/api';
 import { useRouter } from 'next/router';
 import { CheckCircle, ArrowRight, ArrowLeft } from 'lucide-react';
@@ -41,11 +40,11 @@ export default function LearningPathStep() {
   };
 
   if (loading) {
-    return <Layout><LinearProgress /></Layout>;
+    return <><LinearProgress /></>;
   }
 
   if (!path || !path.steps[stepIndex]) {
-    return <Layout><Typography variant="h5" align="center" sx={{ mt: 10 }}>Step not found</Typography></Layout>;
+    return <><Typography variant="h5" align="center" sx={{ mt: 10 }}>Step not found</Typography></>;
   }
 
   const step = path.steps[stepIndex];
@@ -116,7 +115,7 @@ export default function LearningPathStep() {
   };
 
   return (
-    <Layout>
+    <>
       <Container maxWidth="md" sx={{ py: 6 }}>
         <Breadcrumbs sx={{ mb: 4 }}>
           <NextLink href="/learning-paths" passHref legacyBehavior>
@@ -253,6 +252,6 @@ export default function LearningPathStep() {
           </CardContent>
         </Card>
       </Container>
-    </Layout>
+    </>
   );
 }

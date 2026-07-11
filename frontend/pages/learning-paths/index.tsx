@@ -3,7 +3,6 @@ import {
   Box, Typography, Grid, Card, CardContent, Button, 
   LinearProgress, Chip, Container, Alert
 } from '@mui/material';
-import Layout from '../../components/layout/Layout';
 import api from '../../utils/api';
 import { BookOpen, Award, CheckCircle } from 'lucide-react';
 import { useRouter } from 'next/router';
@@ -40,7 +39,7 @@ export default function LearningPathsDashboard() {
   };
 
   return (
-    <Layout>
+    <>
       <Container maxWidth="lg" sx={{ py: 6 }}>
         <Box sx={{ mb: 6, display: 'flex', alignItems: 'center', gap: 2 }}>
           <Box sx={{ p: 2, bgcolor: 'primary.light', borderRadius: 3 }}>
@@ -167,6 +166,6 @@ export default function LearningPathsDashboard() {
           </Grid>
         )}
       </Container>
-    </Layout>
+    </>
   );
 }

@@ -21,7 +21,7 @@ export const getLearningPaths = asyncHandler(async (req: AuthRequest, res: Respo
   }
 
   const pathsWithProgress = paths.map(path => {
-    const progress = userProgress.find(p => p.learningPath.toString() === path._id.toString());
+    const progress = userProgress.find(p => String(p.learningPath) === String(path._id));
     return {
       ...path.toObject(),
       progress: progress || null
@@ -176,13 +176,12 @@ export const completeStep = asyncHandler(async (req: AuthRequest, res: Response)
         const badgeObj = await Badge.findById(path.badge);
         
         if (badgeObj) {
-          await createAndEmitNotification(
-            req.user._id.toString(),
-            'system',
-            `Congratulations! You've completed "${path.title}" and earned the ${badgeObj.name} badge!`,
-            'badge',
-            `/profile`
-          );
+          await createAndEmitNotification({
+            recipientId: String(req.user._id),
+            type: 'system',
+            message: `Congratulations! You've completed "${path.title}" and earned the ${badgeObj.name} badge!`,
+            link: `/profile`
+          });
         }
       }
     }

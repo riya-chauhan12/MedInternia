@@ -4,7 +4,6 @@ import {
   LinearProgress, List, ListItem, ListItemIcon, ListItemText,
   Divider, Breadcrumbs, Link
 } from '@mui/material';
-import Layout from '../../components/layout/Layout';
 import api from '../../utils/api';
 import { useRouter } from 'next/router';
 import { PlayCircle, CheckCircle, Lock, FileText, HelpCircle } from 'lucide-react';
@@ -34,11 +33,11 @@ export default function LearningPathDetails() {
   };
 
   if (loading) {
-    return <Layout><LinearProgress /></Layout>;
+    return <><LinearProgress /></>;
   }
 
   if (!path) {
-    return <Layout><Typography variant="h5" align="center" sx={{ mt: 10 }}>Learning path not found</Typography></Layout>;
+    return <><Typography variant="h5" align="center" sx={{ mt: 10 }}>Learning path not found</Typography></>;
   }
 
   const completedStepIndices = progress?.completedSteps || [];
@@ -53,7 +52,7 @@ export default function LearningPathDetails() {
   const isFullyCompleted = nextStepIndex >= totalSteps;
 
   return (
-    <Layout>
+    <>
       <Container maxWidth="md" sx={{ py: 6 }}>
         <Breadcrumbs sx={{ mb: 4 }}>
           <NextLink href="/learning-paths" passHref legacyBehavior>
@@ -176,6 +175,6 @@ export default function LearningPathDetails() {
           </List>
         </Card>
       </Container>
-    </Layout>
+    </>
   );
 }
