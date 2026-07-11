@@ -527,6 +527,34 @@ export const createCase = asyncHandler(
 
     await Case.findByIdAndUpdate(newCase._id, { pointsAwarded: pointsForCase });
 
+    // Trigger Automated Peer-Review Matching
+    (async () => {
+      try {
+        const targetSpec = aiAnalysis.specialty || spec;
+        const matchedSpecialists = await User.aggregate([
+          {
+            $match: {
+              isVerifiedDoctor: true,
+              specialization: targetSpec,
+              _id: { $ne: new mongoose.Types.ObjectId(user._id) }
+            }
+          },
+          { $sample: { size: 5 } }
+        ]);
+
+        for (const specialist of matchedSpecialists) {
+          await createAndEmitNotification({
+            recipientId: specialist._id.toString(),
+            type: 'peer_review',
+            message: `A new ${targetSpec} case requires peer review. Your expertise is requested!`,
+            link: `/cases/${newCase._id}`
+          });
+        }
+      } catch (err) {
+        console.error("Failed to execute peer-review matching:", err);
+      }
+    })();
+
     res.status(201).json({
       success: true,
       message: "Case created successfully",
