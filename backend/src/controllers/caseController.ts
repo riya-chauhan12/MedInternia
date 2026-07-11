@@ -14,6 +14,7 @@ import {
 import { analyzeCase } from "../services/aiTaggerService";
 import { asyncHandler } from "../utils/asyncHandler";
 import { AppError } from "../utils/AppError";
+import { uploadCaseAttachment } from "../utils/cloudinary";
 
 const canModerateComments = (userType?: string) =>
   ["admin", "doctor", "moderator"].includes(userType ?? "");
@@ -375,6 +376,40 @@ export const rateComment = asyncHandler(
   },
 );
 
+// Upload a case attachment
+export const uploadAttachment = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    if (!req.user) {
+      throw new AppError("User not authenticated", 401);
+    }
+    if (!req.file) {
+      throw new AppError("No file uploaded", 400);
+    }
+
+    const uploadResult = await uploadCaseAttachment(req.file, String(req.user._id));
+    
+    // Determine attachment type from resource_type or mimetype
+    let type = 'image';
+    if (uploadResult.resource_type === 'video') {
+      if (req.file.mimetype.startsWith('audio/')) {
+        type = 'audio';
+      } else {
+        type = 'video';
+      }
+    }
+
+    res.status(201).json({
+      success: true,
+      message: "Attachment uploaded successfully",
+      data: {
+        url: uploadResult.secure_url,
+        type,
+        publicId: uploadResult.public_id,
+      },
+    });
+  }
+);
+
 // Create a new case (Doctor only)
 export const createCase = asyncHandler(
   async (req: AuthRequest, res: Response) => {
@@ -397,7 +432,9 @@ export const createCase = asyncHandler(
       description,
       patientInfo,
       images,
+      attachments,
       specialization,
+      isRareDisease,
     } = req.body;
 
     const spec = specialization || user.specialization || "General Medicine";
@@ -410,16 +447,18 @@ export const createCase = asyncHandler(
       const newCase = new Case({
         title,
         description,
-        symptoms: aiAnalysis.symptoms,
+        symptoms: req.body.symptoms?.length ? req.body.symptoms : aiAnalysis.symptoms,
         patientInfo: patientInfo || {},
         diagnosis: aiAnalysis.diagnosis,
         treatment: aiAnalysis.treatment,
         images: images || [],
-        tags: aiAnalysis.tags,
+        attachments: attachments || [],
+        tags: req.body.tags?.length ? req.body.tags : aiAnalysis.tags,
         difficulty: aiAnalysis.difficulty,
         specialization: aiAnalysis.specialty || spec,
         doctor: user._id as any,
         isPatientCase: true,
+        isRareDisease: isRareDisease === true,
         moderationStatus: "pending",
         moderationAuditTrail: [
           {
@@ -453,16 +492,18 @@ export const createCase = asyncHandler(
     const newCase = new Case({
       title,
       description,
-      symptoms: aiAnalysis.symptoms,
+      symptoms: req.body.symptoms?.length ? req.body.symptoms : aiAnalysis.symptoms,
       patientInfo: patientInfo || {},
       diagnosis: aiAnalysis.diagnosis,
       treatment: aiAnalysis.treatment,
       images: images || [],
-      tags: aiAnalysis.tags,
+      attachments: attachments || [],
+      tags: req.body.tags?.length ? req.body.tags : aiAnalysis.tags,
       difficulty: aiAnalysis.difficulty,
       specialization: aiAnalysis.specialty || spec,
       doctor: user._id as any,
       isPatientCase: false,
+      isRareDisease: isRareDisease === true,
       moderationStatus: "approved",
       moderationAuditTrail: [
         {
@@ -502,6 +543,7 @@ export const getCases = asyncHandler(
       difficulty,
       tags,
       doctor,
+      isRareDisease,
       page = 1,
       limit = 10,
       search,
@@ -516,6 +558,12 @@ export const getCases = asyncHandler(
 
     if (difficulty) {
       filter.difficulty = difficulty;
+    }
+
+    if (isRareDisease === "true") {
+      filter.isRareDisease = true;
+    } else if (isRareDisease === "false") {
+      filter.isRareDisease = false;
     }
 
     if (tags) {

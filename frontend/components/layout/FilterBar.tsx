@@ -7,6 +7,8 @@ import {
   Paper,
   IconButton,
   Stack,
+  Switch,
+  FormControlLabel
 } from '@mui/material';
 import { Search, X } from 'lucide-react';
 
@@ -25,6 +27,8 @@ export interface FilterBarProps {
   difficultyValue?: string;
   onDifficultyChange?: (value: string) => void;
   difficultyOptions?: FilterOption[];
+  isRareDiseaseValue?: boolean;
+  onRareDiseaseChange?: (value: boolean) => void;
   onClear?: () => void;
 }
 
@@ -55,9 +59,11 @@ export default function FilterBar({
   difficultyValue = '',
   onDifficultyChange,
   difficultyOptions = defaultDifficulties,
+  isRareDiseaseValue = false,
+  onRareDiseaseChange,
   onClear,
 }: FilterBarProps) {
-  const hasActiveFilters = Boolean(searchValue || specialtyValue || difficultyValue);
+  const hasActiveFilters = Boolean(searchValue || specialtyValue || difficultyValue || isRareDiseaseValue);
 
   return (
     <Paper
@@ -142,6 +148,23 @@ export default function FilterBar({
               </MenuItem>
             ))}
           </TextField>
+        )}
+
+        {onRareDiseaseChange && (
+          <Box sx={{ display: 'flex', alignItems: 'center', ml: { md: 2 } }}>
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={isRareDiseaseValue}
+                  onChange={(e) => onRareDiseaseChange(e.target.checked)}
+                  color="primary"
+                />
+              }
+              label="Rare Diseases"
+              sx={{ whiteSpace: 'nowrap', mr: 0 }}
+            />
+          </Box>
         )}
 
         {hasActiveFilters && onClear && (

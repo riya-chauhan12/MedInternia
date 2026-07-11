@@ -20,3 +20,25 @@ export function isAllowedUpload(originalname: string, mimetype: string): boolean
     (ALLOWED_UPLOAD_EXTENSIONS as readonly string[]).includes(ext)
   );
 }
+
+export const ALLOWED_CASE_ATTACHMENT_MIME_TYPES = [
+  ...ALLOWED_UPLOAD_MIME_TYPES,
+  'video/mp4',
+  'audio/mpeg',
+  'audio/wav'
+] as const;
+
+export const ALLOWED_CASE_ATTACHMENT_EXTENSIONS = [
+  ...ALLOWED_UPLOAD_EXTENSIONS,
+  '.mp4',
+  '.mp3',
+  '.wav'
+] as const;
+
+export function isAllowedCaseAttachment(originalname: string, mimetype: string): boolean {
+  const ext = path.extname(originalname).toLowerCase();
+  return (
+    (ALLOWED_CASE_ATTACHMENT_MIME_TYPES as readonly string[]).includes(mimetype) &&
+    (ALLOWED_CASE_ATTACHMENT_EXTENSIONS as readonly string[]).includes(ext)
+  );
+}

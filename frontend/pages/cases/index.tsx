@@ -60,6 +60,7 @@ export default function Cases() {
   const [search, setSearch] = useState("");
   const [specialty, setSpecialty] = useState("");
   const [difficulty, setDifficulty] = useState("");
+  const [isRareDisease, setIsRareDisease] = useState(false);
 
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
@@ -89,16 +90,7 @@ export default function Cases() {
           console.warn("Failed to fetch recommended cases", err);
         });
     }
-    api
-      .get("/cases")
-      .then((res) => {
-        setCases(res.data.data.cases || []);
-        setLoading(false);
-      })
-      .catch(() => {
-        setError("Failed to fetch cases");
-        setLoading(false);
-      });
+    // Remove the standalone fetch here so we don't double fetch, fetchCases handles it
   }, []);
 
   // Fetch Cases with Filters
@@ -116,6 +108,7 @@ export default function Cases() {
     if (search) params.search = search;
     if (specialty) params.specialization = specialty;
     if (difficulty) params.difficulty = difficulty;
+    if (isRareDisease) params.isRareDisease = true;
 
     api
       .get("/cases", { params })
@@ -144,7 +137,7 @@ export default function Cases() {
   useEffect(() => {
     setPage(1);
     fetchCases(1, false);
-  }, [search, specialty, difficulty]);
+  }, [search, specialty, difficulty, isRareDisease]);
 
   const loadMoreCases = () => {
     const nextPage = page + 1;
@@ -156,6 +149,7 @@ export default function Cases() {
     setSearch("");
     setSpecialty("");
     setDifficulty("");
+    setIsRareDisease(false);
   };
 
   const specialtyOptions = [
@@ -380,6 +374,8 @@ export default function Cases() {
         difficultyValue={difficulty}
         onDifficultyChange={setDifficulty}
         difficultyOptions={difficultyOptions}
+        isRareDiseaseValue={isRareDisease}
+        onRareDiseaseChange={setIsRareDisease}
         onClear={handleResetFilters}
       />
 
@@ -391,7 +387,7 @@ export default function Cases() {
       ) : error ? (
         <Alert severity="error">{error}</Alert>
       ) : cases.length === 0 ? (
-        !search && !specialty && !difficulty ? (
+        !search && !specialty && !difficulty && !isRareDisease ? (
           <EmptyState
             icon={FileText}
             title="No cases posted yet"

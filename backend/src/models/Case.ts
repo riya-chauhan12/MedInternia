@@ -30,6 +30,11 @@ export interface ICase extends Document {
   diagnosis?: string;
   treatment?: string;
   images?: string[];
+  attachments?: {
+    url: string;
+    type: 'image' | 'video' | 'audio';
+    publicId?: string;
+  }[];
   tags: string[];
   difficulty: 'beginner' | 'intermediate' | 'advanced';
   specialization: string;
@@ -37,6 +42,7 @@ export interface ICase extends Document {
   comments: IComment[];
   likes: mongoose.Types.ObjectId[];
   isActive: boolean;
+  isRareDisease?: boolean;
   isPatientCase: boolean; // True if posted by patient
   moderationStatus: 'pending' | 'approved' | 'rejected' | 'changes_requested';
   moderationReason?: string;
@@ -169,6 +175,11 @@ const CaseSchema = new Schema<ICase>({
     type: String,
     trim: true
   }],
+  attachments: [{
+    url: { type: String, required: true },
+    type: { type: String, enum: ['image', 'video', 'audio'], required: true },
+    publicId: { type: String }
+  }],
   tags: [{
     type: String,
     trim: true,
@@ -197,6 +208,10 @@ const CaseSchema = new Schema<ICase>({
   isActive: {
     type: Boolean,
     default: true
+  },
+  isRareDisease: {
+    type: Boolean,
+    default: false
   },
   isPatientCase: {
     type: Boolean,

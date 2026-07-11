@@ -19,7 +19,8 @@ export const createJobOpportunity = async (req: AuthRequest, res: Response) => {
       salary,
       applicationDeadline,
       contactEmail,
-      externalUrl
+      externalUrl,
+      visaSponsorship
     } = req.body;
 
     // Job managers can post after route-level permission checks.
@@ -42,7 +43,8 @@ export const createJobOpportunity = async (req: AuthRequest, res: Response) => {
       applicationDeadline,
       contactEmail,
       externalUrl,
-      postedBy: req.user!._id
+      postedBy: req.user!._id,
+      visaSponsorship: visaSponsorship === true
     });
 
     await jobOpportunity.save();
@@ -71,6 +73,8 @@ export const getJobOpportunities = async (req: Request, res: Response) => {
       location,
       isRemote,
       isActive,
+      visaSponsorship,
+      maxExperience,
       page = 1,
       limit = 10,
       sortBy = 'createdAt',
@@ -79,7 +83,13 @@ export const getJobOpportunities = async (req: Request, res: Response) => {
 
     const filter: any = {};
     if (type) filter.type = type;
-    if (specialization) filter.specialization = { $in: [specialization] };
+    if (specialization) {
+      if (Array.isArray(specialization)) {
+        filter.specialization = { $in: specialization };
+      } else {
+        filter.specialization = { $in: [specialization] };
+      }
+    }
     if (location) {
       filter.$or = [
         { 'location.city': new RegExp(location as string, 'i') },
@@ -89,6 +99,8 @@ export const getJobOpportunities = async (req: Request, res: Response) => {
     }
     if (isRemote !== undefined) filter['location.isRemote'] = isRemote === 'true';
     if (isActive !== undefined) filter.isActive = isActive === 'true';
+    if (visaSponsorship === 'true') filter.visaSponsorship = true;
+    if (maxExperience) filter['requirements.yearsOfExperience'] = { $lte: Number(maxExperience) };
 
     // Filter out expired opportunities
     filter.applicationDeadline = { $gte: new Date() };

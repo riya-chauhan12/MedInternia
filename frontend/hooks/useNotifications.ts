@@ -52,10 +52,23 @@ export function useNotifications() {
 
     socketRef.current = socket;
 
-    // 3. Listen for real-time notifications
+    // 3. Request browser notification permission
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+
+    // 4. Listen for real-time notifications
     socket.on('new_notification', (notification: Notification) => {
       setNotifications((prev) => [notification, ...prev]);
       setNewToast(notification); // Triggers toast popup
+      
+      // Trigger native browser push notification if permitted
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new window.Notification('MedInternia Alert', {
+          body: notification.message,
+          icon: '/favicon.ico'
+        });
+      }
     });
 
     return () => {

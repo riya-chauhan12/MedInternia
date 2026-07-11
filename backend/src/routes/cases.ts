@@ -29,10 +29,27 @@ import {
   solveCase,
   getRecommendedCases,
   getFlaggedComments,
-  moderateComment
+  moderateComment,
+  uploadAttachment
 } from '../controllers/caseController';
 import { authenticate, optionalAuthenticate } from '../middleware/auth';
 import { requirePermission } from '../middleware/permissions';
+import multer from 'multer';
+import { isAllowedCaseAttachment } from '../utils/uploadValidation';
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 50 * 1024 * 1024 // 50MB limit
+  },
+  fileFilter: (_req, file, cb) => {
+    if (!isAllowedCaseAttachment(file.originalname, file.mimetype)) {
+      cb(new Error('Invalid file type for case attachment.'));
+      return;
+    }
+    cb(null, true);
+  }
+});
 
 const router = express.Router();
 
@@ -44,6 +61,9 @@ router.post('/:id/solve', authenticate, solveCase);
 router.get('/moderation/queue', authenticate, requirePermission('comment:moderate'), getCaseModerationQueue);
 router.get('/comments/moderation/queue', authenticate, requirePermission('comment:moderate'), getFlaggedComments);
 router.get('/ai-posts/my', authenticate, getMyAICaseSchedules);
+
+// Upload Case Attachment
+router.post('/attachments', authenticate, upload.single('attachment'), uploadAttachment);
 
 // Permission-guarded case management routes
 router.post('/', authenticate, requirePermission('case:create'), createCase);

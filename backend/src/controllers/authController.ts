@@ -371,7 +371,7 @@ const ALLOWED_UPDATE_FIELDS = [
   'specialization', 'experience', 'qualifications',
   'medicalSchool', 'yearOfStudy', 'interests', 'mentorDoctor',
   'academicAchievements', 'careerGoals',
-  'emergencyContact', 'medicalHistory', 'allergies'
+  'emergencyContact', 'medicalHistory', 'allergies', 'messagePrivacy'
 ];
 
 // Update user profile

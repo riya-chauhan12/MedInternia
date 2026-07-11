@@ -1,8 +1,8 @@
 import type { AppProps } from 'next/app';
-import { ThemeProvider } from '@mui/material/styles';
 import { CssBaseline, Snackbar, Alert, Typography } from '@mui/material';
 import { useNotifications } from '../hooks/useNotifications';
 import { AuthProvider } from '../context/AuthContext';
+import { CustomThemeProvider } from '../context/ThemeContext';
 import ErrorBoundary from '../components/ErrorBoundary';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -11,7 +11,6 @@ import '../styles/globals.css';
 import Head from 'next/head';
 import Chatbot from '../components/Chatbot';
 import '../i18n';
-import medInterniaTheme from '../theme/medInterniaTheme';
 
 function MyApp({ Component, pageProps }: AppProps) {
   const router = useRouter();
@@ -29,7 +28,7 @@ function MyApp({ Component, pageProps }: AppProps) {
   return (
     <ErrorBoundary>
       <AuthProvider>
-        <ThemeProvider theme={medInterniaTheme}>
+        <CustomThemeProvider>
           <Head>
             <title>MedInternia</title>
             <link rel="icon" type="image/x-icon" href="/favicon.ico" />
@@ -82,7 +81,7 @@ function MyApp({ Component, pageProps }: AppProps) {
                 }}
                 sx={{
                   cursor: newToast?.link ? 'pointer' : 'default',
-                  background: (theme) => theme.custom.navbarGradient,
+                  background: (theme: any) => theme.custom.navbarGradient,
                   color: 'white',
                   minWidth: 280,
                   '& .MuiAlert-icon': { color: 'white' },
@@ -95,7 +94,7 @@ function MyApp({ Component, pageProps }: AppProps) {
               </Alert>
             </Snackbar>
           </div>
-        </ThemeProvider>
+        </CustomThemeProvider>
       </AuthProvider>
     </ErrorBoundary>
   );

@@ -36,6 +36,10 @@ import SearchIcon from '@mui/icons-material/Search';
 import ArticleIcon from '@mui/icons-material/Article';
 import HelpIcon from '@mui/icons-material/Help';
 import CloseIcon from '@mui/icons-material/Close';
+import LightModeIcon from '@mui/icons-material/LightMode';
+import DarkModeIcon from '@mui/icons-material/DarkMode';
+import { ThemeContext } from '../context/ThemeContext';
+import { useContext } from 'react';
 
 import { getCurrentUserRole } from '../utils/permissions';
 import { getAuthToken } from "../utils/api";
@@ -117,6 +121,7 @@ export default function Navbar({ route }: { route?: string }) {
   const router = useRouter();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'), { noSsr: true });
+  const { mode, toggleColorMode } = useContext(ThemeContext);
 
   const handleHomeNav = () => {
     if (typeof window !== 'undefined') {
@@ -410,6 +415,11 @@ export default function Navbar({ route }: { route?: string }) {
 
           <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 1 }}>
             <LanguageSwitcher />
+            <Tooltip title={mode === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'} placement="bottom" arrow>
+              <IconButton onClick={toggleColorMode} color="inherit">
+                {mode === 'dark' ? <LightModeIcon /> : <DarkModeIcon />}
+              </IconButton>
+            </Tooltip>
             <ProfileDropdown
               onNavigate={router.push}
               profileImageUrl={profileImageUrl}
