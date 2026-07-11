@@ -194,6 +194,16 @@ io.on('connection', (socket) => {
   socket.join(`user:${userId}`);
   console.log(`Socket connected: user ${userId} joined room user:${userId}`);
 
+  socket.on('join_webinar', (webinarId: string) => {
+    socket.join(`webinar:${webinarId}`);
+    console.log(`User ${userId} joined webinar room: webinar:${webinarId}`);
+  });
+
+  socket.on('leave_webinar', (webinarId: string) => {
+    socket.leave(`webinar:${webinarId}`);
+    console.log(`User ${userId} left webinar room: webinar:${webinarId}`);
+  });
+
   socket.on('disconnect', () => {
     console.log(`Socket disconnected: user ${userId}`);
   });

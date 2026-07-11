@@ -11,7 +11,13 @@ import {
   markAttendance,
   submitFeedback,
   getUserWebinars,
-  generateMeetingLink
+  generateMeetingLink,
+  createPoll,
+  votePoll,
+  closePoll,
+  askQuestion,
+  upvoteQuestion,
+  markQuestionAnswered
 } from '../controllers/webinarController';
 
 const router = Router();
@@ -45,5 +51,31 @@ router.post('/:id/feedback', authenticate, requirePermission('webinar:feedback')
 
 // Generate meeting link
 router.post('/:id/meeting-link', authenticate, requirePermission('webinar:manage'), generateMeetingLink);
+
+// ------------------------------------------------------------------
+// POLLING ROUTES
+// ------------------------------------------------------------------
+
+// Create a new poll
+router.post('/:id/polls', authenticate, requirePermission('webinar:manage'), createPoll);
+
+// Vote on a poll
+router.post('/:id/polls/:pollId/vote', authenticate, votePoll);
+
+// Close a poll
+router.patch('/:id/polls/:pollId/close', authenticate, requirePermission('webinar:manage'), closePoll);
+
+// ------------------------------------------------------------------
+// Q&A ROUTES
+// ------------------------------------------------------------------
+
+// Ask a question
+router.post('/:id/qna', authenticate, askQuestion);
+
+// Upvote a question
+router.post('/:id/qna/:qnaId/upvote', authenticate, upvoteQuestion);
+
+// Mark a question as answered
+router.patch('/:id/qna/:qnaId/answer', authenticate, requirePermission('webinar:manage'), markQuestionAnswered);
 
 export default router;

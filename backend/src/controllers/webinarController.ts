@@ -3,6 +3,7 @@ import { AuthRequest } from '../middleware/auth';
 import Webinar from '../models/Webinar';
 import Notification from '../models/Notification';
 import User from '../models/User';
+import { getSocketIO } from '../utils/socket';
 
 const getWebinarEndTime = (webinar: { scheduledAt: Date; duration?: number }) => {
   const durationInMinutes = webinar.duration || 0;
@@ -116,7 +117,7 @@ export const createWebinar = async (req: AuthRequest, res: Response) => {
       message: 'Webinar created successfully',
       data: { webinar, meetingLink: webinar.meetingLink }
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Create webinar error:', error);
     res.status(500).json({
       success: false,
@@ -208,7 +209,7 @@ export const getWebinars = async (req: Request, res: Response) => {
         currentPage: Number(page)
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get webinars error:', error);
     res.status(500).json({
       success: false,
@@ -239,7 +240,7 @@ export const getWebinarById = async (req: Request, res: Response) => {
       success: true,
       data: { webinar }
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get webinar error:', error);
     res.status(500).json({
       success: false,
@@ -312,7 +313,7 @@ export const registerForWebinar = async (req: AuthRequest, res: Response) => {
       message: 'Successfully registered for webinar',
       data: { webinar }
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Register for webinar error:', error);
     res.status(500).json({
       success: false,
@@ -363,7 +364,7 @@ export const unregisterFromWebinar = async (req: AuthRequest, res: Response) => 
       success: true,
       message: 'Successfully unregistered from webinar'
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Unregister from webinar error:', error);
     res.status(500).json({
       success: false,
@@ -396,7 +397,7 @@ export const updateWebinar = async (req: AuthRequest, res: Response) => {
       message: 'Webinar updated successfully',
       data: { webinar }
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Update webinar error:', error);
     res.status(500).json({
       success: false,
@@ -438,7 +439,7 @@ export const markAttendance = async (req: AuthRequest, res: Response) => {
       success: true,
       message: 'Attendance marked successfully'
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Mark attendance error:', error);
     res.status(500).json({
       success: false,
@@ -487,7 +488,7 @@ export const submitFeedback = async (req: AuthRequest, res: Response) => {
       success: true,
       message: 'Feedback submitted successfully'
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Submit feedback error:', error);
     res.status(500).json({
       success: false,
@@ -531,7 +532,7 @@ export const getUserWebinars = async (req: AuthRequest, res: Response) => {
         total: webinars.length
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get user webinars error:', error);
     res.status(500).json({
       success: false,
@@ -578,11 +579,187 @@ export const generateMeetingLink = async (req: AuthRequest, res: Response) => {
         webinar 
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Generate meeting link error:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error'
     });
+  }
+};
+
+// ------------------------------------------------------------------
+// POLLING CONTROLLERS
+// ------------------------------------------------------------------
+
+export const createPoll = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { question, options } = req.body;
+    
+    if (req.user!.userType !== 'doctor' && req.user!.userType !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const webinar = await Webinar.findById(id);
+    if (!webinar) return res.status(404).json({ success: false, message: 'Webinar not found' });
+    if (webinar.host.toString() !== String(req.user!._id) && req.user!.userType !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Only the host can create polls' });
+    }
+
+    webinar.polls.push({
+      question,
+      options,
+      active: true,
+      votes: new Map(),
+      createdAt: new Date()
+    });
+
+    await webinar.save();
+
+    const io = getSocketIO();
+    if (io) io.to(`webinar:${id}`).emit('webinar_update', webinar);
+
+    res.status(201).json({ success: true, data: webinar });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+export const votePoll = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id, pollId } = req.params;
+    const { optionIndex } = req.body;
+    const userId = String(req.user!._id);
+
+    const webinar = await Webinar.findById(id);
+    if (!webinar) return res.status(404).json({ success: false, message: 'Webinar not found' });
+
+    const poll = webinar.polls.find(p => p._id?.toString() === pollId);
+    if (!poll) return res.status(404).json({ success: false, message: 'Poll not found' });
+    if (!poll.active) return res.status(400).json({ success: false, message: 'Poll is closed' });
+
+    poll.votes.set(userId, optionIndex);
+    await webinar.save();
+
+    const io = getSocketIO();
+    if (io) io.to(`webinar:${id}`).emit('webinar_update', webinar);
+
+    res.json({ success: true, data: webinar });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+export const closePoll = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id, pollId } = req.params;
+
+    const webinar = await Webinar.findById(id);
+    if (!webinar) return res.status(404).json({ success: false, message: 'Webinar not found' });
+    if (webinar.host.toString() !== String(req.user!._id) && req.user!.userType !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Only the host can close polls' });
+    }
+
+    const poll = webinar.polls.find(p => p._id?.toString() === pollId);
+    if (!poll) return res.status(404).json({ success: false, message: 'Poll not found' });
+
+    poll.active = false;
+    await webinar.save();
+
+    const io = getSocketIO();
+    if (io) io.to(`webinar:${id}`).emit('webinar_update', webinar);
+
+    res.json({ success: true, data: webinar });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// ------------------------------------------------------------------
+// Q&A CONTROLLERS
+// ------------------------------------------------------------------
+
+export const askQuestion = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { question } = req.body;
+
+    const webinar = await Webinar.findById(id);
+    if (!webinar) return res.status(404).json({ success: false, message: 'Webinar not found' });
+
+    webinar.qna.push({
+      question,
+      author: req.user!._id,
+      upvotes: [],
+      isAnswered: false,
+      createdAt: new Date()
+    });
+
+    await webinar.save();
+    await webinar.populate('qna.author', 'firstName lastName profilePicture');
+
+    const io = getSocketIO();
+    if (io) io.to(`webinar:${id}`).emit('webinar_update', webinar);
+
+    res.status(201).json({ success: true, data: webinar });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+export const upvoteQuestion = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id, qnaId } = req.params;
+    const userId = req.user!._id;
+
+    const webinar = await Webinar.findById(id);
+    if (!webinar) return res.status(404).json({ success: false, message: 'Webinar not found' });
+
+    const question = webinar.qna.find(q => q._id?.toString() === qnaId);
+    if (!question) return res.status(404).json({ success: false, message: 'Question not found' });
+
+    const upvoteIndex = question.upvotes.findIndex((v: any) => v.toString() === (userId as any).toString());
+    if (upvoteIndex > -1) {
+      question.upvotes.splice(upvoteIndex, 1);
+    } else {
+      question.upvotes.push(userId as any);
+    }
+
+    await webinar.save();
+    await webinar.populate('qna.author', 'firstName lastName profilePicture');
+
+    const io = getSocketIO();
+    if (io) io.to(`webinar:${id}`).emit('webinar_update', webinar);
+
+    res.json({ success: true, data: webinar });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+export const markQuestionAnswered = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id, qnaId } = req.params;
+
+    const webinar = await Webinar.findById(id);
+    if (!webinar) return res.status(404).json({ success: false, message: 'Webinar not found' });
+    if (webinar.host.toString() !== String(req.user!._id) && req.user!.userType !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Only the host can mark questions answered' });
+    }
+
+    const question = webinar.qna.find(q => q._id?.toString() === qnaId);
+    if (!question) return res.status(404).json({ success: false, message: 'Question not found' });
+
+    question.isAnswered = true;
+    await webinar.save();
+    await webinar.populate('qna.author', 'firstName lastName profilePicture');
+
+    const io = getSocketIO();
+    if (io) io.to(`webinar:${id}`).emit('webinar_update', webinar);
+
+    res.json({ success: true, data: webinar });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 };

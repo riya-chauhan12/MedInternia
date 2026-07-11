@@ -27,6 +27,22 @@ export interface IWebinar extends Document {
     };
   }[];
   tags: string[];
+  polls: {
+    _id?: mongoose.Types.ObjectId;
+    question: string;
+    options: string[];
+    active: boolean;
+    votes: Map<string, number>; // userId string -> option index
+    createdAt: Date;
+  }[];
+  qna: {
+    _id?: mongoose.Types.ObjectId;
+    question: string;
+    author: mongoose.Types.ObjectId | any;
+    upvotes: mongoose.Types.ObjectId[];
+    isAnswered: boolean;
+    createdAt: Date;
+  }[];
   isActive: boolean;
   isRecorded: boolean;
   status: 'scheduled' | 'live' | 'completed' | 'cancelled';
@@ -129,6 +145,24 @@ const WebinarSchema = new Schema({
   }],
   tags: [{
     type: String
+  }],
+  polls: [{
+    question: { type: String, required: true },
+    options: [{ type: String, required: true }],
+    active: { type: Boolean, default: true },
+    votes: {
+      type: Map,
+      of: Number,
+      default: {}
+    },
+    createdAt: { type: Date, default: Date.now }
+  }],
+  qna: [{
+    question: { type: String, required: true },
+    author: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    upvotes: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+    isAnswered: { type: Boolean, default: false },
+    createdAt: { type: Date, default: Date.now }
   }],
   isActive: {
     type: Boolean,
