@@ -18,6 +18,7 @@ import GroupIcon from "@mui/icons-material/Group";
 import StarIcon from "@mui/icons-material/Star";
 import ThumbUpAltIcon from "@mui/icons-material/ThumbUpAlt";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
+import { useTranslation } from 'react-i18next';
 
 interface ProfileDropdownProps {
   onNavigate: (path: string) => void;
@@ -28,6 +29,7 @@ interface ProfileDropdownProps {
 }
 
 const ProfileDropdown: React.FC<ProfileDropdownProps> = ({ onNavigate, profileImageUrl, firstName, lastName, userType }) => {
+  const { t } = useTranslation('common');
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
 
@@ -100,7 +102,7 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({ onNavigate, profileIm
       >
         <Box px={2} py={1}>
           <Typography variant="subtitle1" fontWeight={700}>
-            Profile
+            {t('navbar.profile')}
           </Typography>
         </Box>
         <Divider sx={{ my: 1 }} />

@@ -10,6 +10,7 @@ import { useRouter } from 'next/router';
 import '../styles/globals.css';
 import Head from 'next/head';
 import Chatbot from '../components/Chatbot';
+import '../i18n';
 import medInterniaTheme from '../theme/medInterniaTheme';
 
 function MyApp({ Component, pageProps }: AppProps) {
