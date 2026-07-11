@@ -30,6 +30,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import ProfileDropdown from './ProfileDropdown';
 import NotificationBell from './NotificationBell';
+import LanguageSwitcher from './LanguageSwitcher';
+import { useTranslation } from 'react-i18next';
 import SearchIcon from '@mui/icons-material/Search';
 import ArticleIcon from '@mui/icons-material/Article';
 import HelpIcon from '@mui/icons-material/Help';
@@ -115,6 +117,7 @@ const NavButton: React.FC<NavButtonProps> = ({
 };
 
 export default function Navbar({ route }: { route?: string }) {
+  const { t } = useTranslation('common');
   const router = useRouter();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'), { noSsr: true });
@@ -192,23 +195,26 @@ export default function Navbar({ route }: { route?: string }) {
 
   const navItems = [
     ...(isLoggedIn
-      ? [{ href: '/cases', icon: <FolderOpenIcon />, label: 'Cases' }]
+      ? [{ href: '/cases', icon: <FolderOpenIcon />, label: t('navbar.cases') }]
       : []),
-    { href: '/diaries', icon: <BookIcon />, label: 'Diaries' },
-    { href: '/upload-raw', icon: <DatasetIcon />, label: 'Upload Raw' },
-    { href: '/jobs', icon: <WorkIcon />, label: 'Jobs' },
-    { href: '/webinars', icon: <VideocamIcon />, label: 'Webinars' },
+    { href: '/learning-paths', icon: <BookIcon />, label: t('navbar.learningPaths') },
+    { href: '/patients', icon: <DatasetIcon />, label: t('navbar.patients') },
+    { href: '/doctors', icon: <WorkIcon />, label: t('navbar.doctors') },
+    { href: '/webinars', icon: <VideocamIcon />, label: t('navbar.webinars') },
     { href: '/mentorship', icon: <ArticleIcon />, label: 'Mentorship' },
     { href: '/research_paper', icon: <ArticleIcon />, label: 'Research Paper' },
+    { href: '/diaries', icon: <BookIcon />, label: 'Diaries' },
     { href: '/faq', icon: <HelpIcon />, label: 'FAQ' },
   ];
 
   const mobileNavItems = [
     ...(isLoggedIn
-      ? [{ href: '/cases', icon: <FolderOpenIcon />, label: 'Cases' }]
+      ? [{ href: '/cases', icon: <FolderOpenIcon />, label: t('navbar.cases') }]
       : []),
-    { href: '/jobs', icon: <WorkIcon />, label: 'Jobs' },
-    { href: '/webinars', icon: <VideocamIcon />, label: 'Webinars' },
+    { href: '/learning-paths', icon: <BookIcon />, label: t('navbar.learningPaths') },
+    { href: '/patients', icon: <DatasetIcon />, label: t('navbar.patients') },
+    { href: '/doctors', icon: <WorkIcon />, label: t('navbar.doctors') },
+    { href: '/webinars', icon: <VideocamIcon />, label: t('navbar.webinars') },
     { href: '/mentorship', icon: <ArticleIcon />, label: 'Mentorship' },
     { href: '/research_paper', icon: <ArticleIcon />, label: 'Research Paper' },
     { href: '/diaries', icon: <BookIcon />, label: 'Diaries' },
@@ -254,7 +260,7 @@ export default function Navbar({ route }: { route?: string }) {
             setIsFocused(false);
             setTimeout(() => setShowSuggestions(false), 150);
           }}
-          placeholder={!showHint ? 'Search medical cases, jobs, or webinars…' : ''}
+          placeholder={!showHint ? t('navbar.searchPlaceholder') : ''}
           aria-label="Search medical content"
           style={{
             border: 'none',
@@ -390,7 +396,7 @@ export default function Navbar({ route }: { route?: string }) {
                 color: 'text.primary',
               }}
             >
-              MedInternia
+              {t('navbar.brand')}
             </Typography>
           </Box>
 
@@ -416,6 +422,7 @@ export default function Navbar({ route }: { route?: string }) {
           )}
 
           <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 1 }}>
+            <LanguageSwitcher />
             <Tooltip title={mode === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'} placement="bottom" arrow>
               <IconButton onClick={toggleColorMode} color="inherit">
                 {mode === 'dark' ? <LightModeIcon /> : <DarkModeIcon />}

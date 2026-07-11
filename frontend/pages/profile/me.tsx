@@ -19,14 +19,17 @@ import EditIcon from '@mui/icons-material/Edit';
 import SchoolIcon from '@mui/icons-material/School';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import LibraryBooksIcon from '@mui/icons-material/LibraryBooks';
+import MenuBookIcon from '@mui/icons-material/MenuBook';
 import Link from 'next/link';
 import api from '../../utils/api';
+import ResumeExportButton from '../../components/ResumeExportButton';
 
 export default function MeProfilePage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [user, setUser] = useState<any>(null);
+  const [badges, setBadges] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -42,7 +45,9 @@ export default function MeProfilePage() {
         const res = await api.get(`/users/${userId}/profile`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        setUser(res.data?.data?.user || res.data?.user || res.data);
+        const profileData = res.data?.data || res.data;
+        setUser(profileData?.user || profileData);
+        setBadges(profileData?.badges || []);
       } catch (err: any) {
         console.error('Profile fetch error:', err);
         setError('Failed to load profile.');
@@ -126,15 +131,18 @@ export default function MeProfilePage() {
             </Stack>
           </Grid>
           <Grid size={{ xs: 12, sm: 'auto' }} sx={{ textAlign: 'center' }}>
-            <Button 
-              variant="outlined" 
-              component={Link}
-              href="/profile/edit"
-              startIcon={<EditIcon />}
-              sx={{ borderRadius: 3, textTransform: 'none', fontWeight: 600 }}
-            >
-              Edit Profile
-            </Button>
+            <Stack spacing={2} direction={{ xs: 'row', sm: 'column' }} justifyContent="center">
+              <ResumeExportButton user={user} badges={badges} />
+              <Button 
+                variant="outlined" 
+                component={Link}
+                href="/profile/edit"
+                startIcon={<EditIcon />}
+                sx={{ borderRadius: 3, textTransform: 'none', fontWeight: 600 }}
+              >
+                Edit Profile
+              </Button>
+            </Stack>
           </Grid>
         </Grid>
 
@@ -296,6 +304,41 @@ export default function MeProfilePage() {
               </Stack>
             </Stack>
           </Card>
+
+          {/* Publications */}
+          {user.publications && user.publications.length > 0 && (
+            <Card sx={{ p: 3, borderRadius: 4, mt: 4, border: '1px solid #e3eafc', boxShadow: '0 4px 20px rgba(0,0,0,0.02)' }}>
+              <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>
+                Publications ({user.publications.length})
+              </Typography>
+              <Stack spacing={2}>
+                {user.publications.map((pub: any, index: number) => (
+                  <Box key={index} sx={{ p: 2, border: '1px solid #e0e0e0', borderRadius: 2 }}>
+                    <Typography variant="subtitle1" fontWeight={600} color="primary">
+                      {pub.title}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {pub.journal} • {pub.year}
+                    </Typography>
+                    {pub.url && (
+                      <Button
+                        variant="text"
+                        color="secondary"
+                        size="small"
+                        component="a"
+                        href={pub.url}
+                        target="_blank"
+                        startIcon={<MenuBookIcon />}
+                        sx={{ mt: 1, textTransform: 'none' }}
+                      >
+                        View Paper
+                      </Button>
+                    )}
+                  </Box>
+                ))}
+              </Stack>
+            </Card>
+          )}
         </Grid>
       </Grid>
     </Box>

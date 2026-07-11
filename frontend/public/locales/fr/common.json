@@ -1,0 +1,14 @@
+{
+  "navbar": {
+    "brand": "MedInternia",
+    "cases": "Cas",
+    "webinars": "Webinaires",
+    "patients": "Patients",
+    "doctors": "Médecins",
+    "learningPaths": "Parcours d'Apprentissage",
+    "searchPlaceholder": "Rechercher MedInternia...",
+    "signIn": "Se Connecter",
+    "logout": "Déconnexion",
+    "profile": "Profil"
+  }
+}

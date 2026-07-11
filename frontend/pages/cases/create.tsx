@@ -24,6 +24,36 @@ import { Close as CloseIcon } from "@mui/icons-material";
 import api from "../../utils/api";
 import { useRouter } from "next/router";
 import PageHeader from "../../components/layout/PageHeader";
+import { Menu } from "@mui/material";
+
+const SOAP_TEMPLATE = `**Subjective:**
+- Chief Complaint: 
+- History of Present Illness (HPI): 
+
+**Objective:**
+- Vitals: 
+- Physical Exam: 
+- Labs/Imaging: 
+
+**Assessment:**
+- Primary Diagnosis: 
+- Differential Diagnoses: 
+
+**Plan:**
+- Treatment/Medications: 
+- Follow-up: `;
+
+const SBAR_TEMPLATE = `**Situation:**
+- What is going on with the patient?
+
+**Background:**
+- Clinical background or context:
+
+**Assessment:**
+- What do I think the problem is?
+
+**Recommendation:**
+- What would I do to correct it?`;
 
 const SPECIALTIES = [
   "General Medicine",
@@ -56,6 +86,7 @@ export default function CreateCase() {
     tags: [] as string[],
     symptoms: [] as string[],
     isRareDisease: false,
+    verifiedDoctorsOnly: false,
   });
 
   const [images, setImages] = useState<string[]>([]);
@@ -64,6 +95,7 @@ export default function CreateCase() {
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
   const [loadingStepIndex, setLoadingStepIndex] = useState(0);
+  const [templateMenuAnchor, setTemplateMenuAnchor] = useState<null | HTMLElement>(null);
 
   const router = useRouter();
 
@@ -268,12 +300,56 @@ export default function CreateCase() {
                   }
                   sx={{ mb: 2 }}
                 />
+                
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={form.verifiedDoctorsOnly}
+                      onChange={handleChange}
+                      name="verifiedDoctorsOnly"
+                      color="error"
+                    />
+                  }
+                  label={
+                    <Box>
+                      <Typography variant="body1" fontWeight={600} color="error.main">
+                        Restrict visibility strictly to Verified Doctors
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        For sensitive or highly graphic professional cases meant for peer review only.
+                      </Typography>
+                    </Box>
+                  }
+                />
               </Grid>
 
               <Grid size={{ xs: 12 }}>
-                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1, color: "text.primary" }}>
-                  Clinical Case Description
-                </Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                  <Typography variant="subtitle2" fontWeight={700} sx={{ color: "text.primary" }}>
+                    Clinical Case Description
+                  </Typography>
+                  <Button 
+                    size="small" 
+                    variant="outlined" 
+                    onClick={(e) => setTemplateMenuAnchor(e.currentTarget)}
+                  >
+                    Insert Template
+                  </Button>
+                  <Menu
+                    anchorEl={templateMenuAnchor}
+                    open={Boolean(templateMenuAnchor)}
+                    onClose={() => setTemplateMenuAnchor(null)}
+                  >
+                    <MenuItem onClick={() => {
+                      setForm(prev => ({ ...prev, description: prev.description ? prev.description + "\n\n" + SOAP_TEMPLATE : SOAP_TEMPLATE }));
+                      setTemplateMenuAnchor(null);
+                    }}>SOAP Note</MenuItem>
+                    <MenuItem onClick={() => {
+                      setForm(prev => ({ ...prev, description: prev.description ? prev.description + "\n\n" + SBAR_TEMPLATE : SBAR_TEMPLATE }));
+                      setTemplateMenuAnchor(null);
+                    }}>SBAR Format</MenuItem>
+                  </Menu>
+                </Box>
                 <TextField
                   placeholder="Write a detailed description of the case. Include presentation, clinical observations, lab reports, diagnostics, or questions for peer review. Do not include identifiable patient details."
                   name="description"

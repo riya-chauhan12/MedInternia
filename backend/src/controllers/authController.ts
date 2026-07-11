@@ -367,7 +367,7 @@ export const getProfile = asyncHandler(
 
 const ALLOWED_UPDATE_FIELDS = [
   'firstName', 'lastName', 'phone', 'dateOfBirth', 'gender', 'address',
-  'bio', 'profilePicture', 'linkedInProfile', 'githubProfile',
+  'bio', 'profilePicture', 'linkedInProfile', 'githubProfile', 'orcidId',
   'specialization', 'experience', 'qualifications',
   'medicalSchool', 'yearOfStudy', 'interests', 'mentorDoctor',
   'academicAchievements', 'careerGoals',
@@ -544,4 +544,58 @@ export const logout = asyncHandler(async (req: AuthRequest, res: Response) => {
   res.clearCookie('token');
   res.clearCookie('auth_status');
   res.json({ success: true, message: 'Logged out successfully' });
+});
+
+export const syncOrcidPublications = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const user = req.user;
+  if (!user) {
+    throw new AppError("User not authenticated", 401);
+  }
+
+  if (!user.orcidId) {
+    throw new AppError("No ORCID iD provided in your profile", 400);
+  }
+
+  try {
+    const response = await fetch(`https://pub.orcid.org/v3.0/${user.orcidId}/works`, {
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch from ORCID API');
+    }
+
+    const data = await response.json();
+    const works = data?.group || [];
+
+    const publications = works.map((workGroup: any) => {
+      const workSummary = workGroup['work-summary']?.[0];
+      if (!workSummary) return null;
+
+      return {
+        title: workSummary.title?.title?.value || 'Untitled',
+        year: workSummary['publication-date']?.year?.value || 'Unknown',
+        journal: workSummary['journal-title']?.value || 'Unknown Journal',
+        url: workSummary.url?.value || ''
+      };
+    }).filter(Boolean);
+
+    const updatedUser = await User.findByIdAndUpdate(
+      user._id,
+      { publications },
+      { new: true, runValidators: true }
+    ).select("-password");
+
+    res.json({
+      success: true,
+      message: "ORCID publications synced successfully",
+      data: {
+        user: updatedUser
+      }
+    });
+  } catch (error) {
+    throw new AppError("Failed to sync ORCID publications. Please check your ORCID iD.", 500);
+  }
 });

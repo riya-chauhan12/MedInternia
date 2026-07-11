@@ -8,10 +8,12 @@ export default function UpdateProfile() {
     firstName: '',
     phone: '',
     address: { city: '', state: '' },
-    profilePicture: ''
+    profilePicture: '',
+    orcidId: ''
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [isSyncing, setIsSyncing] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -33,7 +35,8 @@ export default function UpdateProfile() {
             city: user.address?.city || '',
             state: user.address?.state || ''
           },
-          profilePicture: user.profilePicture || ''
+          profilePicture: user.profilePicture || '',
+          orcidId: user.orcidId || ''
         });
       })
       .catch(() => {});
@@ -63,6 +66,30 @@ export default function UpdateProfile() {
     }
   };
 
+  const handleSyncOrcid = async () => {
+    setError('');
+    setSuccess('');
+    setIsSyncing(true);
+    try {
+      const token = localStorage.getItem('token');
+      
+      // Save profile first so backend has latest ORCID
+      await api.put('/auth/profile', form, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      await api.post('/auth/profile/orcid/sync', {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      setSuccess('ORCID publications synced successfully!');
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to sync ORCID publications');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   return (
     <Container maxWidth="sm">
       <Box sx={{ my: 4 }}>
@@ -84,7 +111,30 @@ export default function UpdateProfile() {
           <TextField label="Phone" name="phone" fullWidth margin="normal" value={form.phone} onChange={handleChange} />
           <TextField label="City" name="city" fullWidth margin="normal" value={form.address.city} onChange={handleChange} />
           <TextField label="State" name="state" fullWidth margin="normal" value={form.address.state} onChange={handleChange} />
-          <Button type="submit" variant="contained" color="primary" fullWidth sx={{ mt: 2 }}>
+          
+          <Box sx={{ mt: 2, p: 2, border: '1px solid #e0e0e0', borderRadius: 2, bgcolor: '#fafafa' }}>
+            <Typography variant="subtitle1" fontWeight={600} gutterBottom>Academic Credentials</Typography>
+            <TextField 
+              label="ORCID iD (e.g. 0000-0002-1825-0097)" 
+              name="orcidId" 
+              fullWidth 
+              margin="normal" 
+              value={form.orcidId} 
+              onChange={handleChange} 
+              helperText="Link your ORCID to automatically fetch and display your publications on your profile."
+            />
+            <Button 
+              variant="outlined" 
+              color="secondary" 
+              onClick={handleSyncOrcid}
+              disabled={!form.orcidId || isSyncing}
+              sx={{ mt: 1 }}
+            >
+              {isSyncing ? 'Syncing...' : 'Sync ORCID Publications'}
+            </Button>
+          </Box>
+
+          <Button type="submit" variant="contained" color="primary" fullWidth sx={{ mt: 3 }}>
             Update Profile
           </Button>
         </form>

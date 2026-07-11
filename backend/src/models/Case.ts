@@ -56,6 +56,7 @@ export interface ICase extends Document {
   }[];
   pointsAwarded: number; // Points given to doctor for posting
   canRepost: boolean; // Indicates if the case can be reposted
+  verifiedDoctorsOnly: boolean; // Restrict visibility to Verified Doctors
   followUps: {
     author: mongoose.Types.ObjectId;
     content: string;
@@ -259,10 +260,14 @@ const CaseSchema = new Schema<ICase>({
     default: 0,
     min: [0, 'Points awarded cannot be negative']
   },
-    canRepost: {
-      type: Boolean,
-      default: false
-    },
+  canRepost: {
+    type: Boolean,
+    default: false
+  },
+  verifiedDoctorsOnly: {
+    type: Boolean,
+    default: false
+  },
   followUps: [{
     author: {
       type: Schema.Types.ObjectId,

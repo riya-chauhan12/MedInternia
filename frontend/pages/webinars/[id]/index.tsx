@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { Container, Typography, Box, CircularProgress, Alert, Card, CardContent, Button, Chip } from '@mui/material';
-import api from '../../utils/api';
+import api from '../../../utils/api';
 
 const getWebinarEndTime = (webinar: any) => {
   const duration = Number(webinar.duration || 0);

@@ -10,6 +10,7 @@ import { useRouter } from 'next/router';
 import '../styles/globals.css';
 import Head from 'next/head';
 import Chatbot from '../components/Chatbot';
+import '../i18n';
 
 function MyApp({ Component, pageProps }: AppProps) {
   const router = useRouter();

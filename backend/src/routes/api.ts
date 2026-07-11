@@ -20,6 +20,7 @@ import diseaseInsightRoutes from './diseaseInsights';
 import symptomRoutes from './symptoms';
 import diaryRoutes from "./diary";
 import messageRoutes from './messageRoutes';
+import learningPathRoutes from './learningPaths';
 const router = Router();
 
 router.get('/', (req: Request, res: Response) => {
@@ -85,5 +86,6 @@ router.use('/', enhancedRoutes);
 router.use('/research-papers', researchPaperRoutes);
 router.use("/diaries", diaryRoutes);
 router.use('/messages', messageRoutes);
+router.use('/learning-paths', learningPathRoutes);
 
 export default router;

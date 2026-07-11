@@ -22,10 +22,11 @@ import {
   Tabs,
   Tab
 } from '@mui/material';
-import { MessageCircleReply, Pin, CheckCircle2, Sparkles } from 'lucide-react';
+import { MessageCircleReply, Pin, CheckCircle2, Sparkles, Lock } from 'lucide-react';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import PushPinIcon from '@mui/icons-material/PushPin';
 import ThumbUpAltOutlinedIcon from '@mui/icons-material/ThumbUpAltOutlined';
+import GlossaryText from '../../components/GlossaryText';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -88,8 +89,12 @@ export default function CaseDiscussion({ id: propId, modalMode, hideDescription 
         setDiscussions(all.filter((c: any) => !c.pinned));
         setLoading(false);
       })
-      .catch(() => {
-        setError('Failed to fetch case');
+      .catch((err) => {
+        if (err.response && err.response.status === 403) {
+          setError(err.response.data.message || 'Access Denied');
+        } else {
+          setError('Failed to fetch case');
+        }
         setLoading(false);
       });
   }, [id]);
@@ -228,7 +233,34 @@ export default function CaseDiscussion({ id: propId, modalMode, hideDescription 
       </Box>
     );
   }
-  if (error) return <Container maxWidth="md" sx={{ py: 4 }}><Alert severity="error">{error}</Alert></Container>;
+  
+  if (error) {
+    const isAccessDenied = error.startsWith('Access Denied');
+    return (
+      <Container maxWidth="md" sx={{ py: 8, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <Alert 
+          severity="error" 
+          icon={isAccessDenied ? <Lock size={24} /> : undefined}
+          sx={{ mb: 3, width: '100%', py: 2, borderRadius: 3, fontSize: '1.1rem' }}
+        >
+          <Typography variant="subtitle1" fontWeight={700} sx={{ display: 'inline-block', mr: 1 }}>
+            {isAccessDenied ? 'Protected Case' : 'Error'}
+          </Typography>
+          {error}
+        </Alert>
+        <Button
+          startIcon={<ArrowBackIcon />}
+          component={Link}
+          href="/cases"
+          variant="contained"
+          sx={{ mt: 2, borderRadius: 2 }}
+        >
+          Return to Cases Feed
+        </Button>
+      </Container>
+    );
+  }
+
   if (!caseData) return null;
 
   const caseAuthorName = caseData.doctor
@@ -498,6 +530,15 @@ export default function CaseDiscussion({ id: propId, modalMode, hideDescription 
                   sx={{ fontWeight: 700, borderRadius: '8px', fontSize: '13px', px: 0.5 }}
                 />
               )}
+              {caseData.verifiedDoctorsOnly && (
+                <Chip
+                  icon={<Lock size={14} />}
+                  label="Verified Doctors Only"
+                  color="error"
+                  variant="filled"
+                  sx={{ fontWeight: 700, borderRadius: '8px', fontSize: '13px', px: 0.5, bgcolor: '#fee2e2', color: '#b91c1c', border: '1px solid #fecaca' }}
+                />
+              )}
               {caseData.tags && caseData.tags.map((tag: string) => (
                 <Chip
                   key={tag}
@@ -601,7 +642,7 @@ export default function CaseDiscussion({ id: propId, modalMode, hideDescription 
                   Clinical History & Details
                 </Typography>
                 <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', color: 'text.primary', fontSize: '1.05rem', lineHeight: 1.7 }}>
-                  {caseData.description}
+                  <GlossaryText text={caseData.description} />
                 </Typography>
               </Box>
 

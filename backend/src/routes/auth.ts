@@ -5,7 +5,8 @@ import {
   login,
   getProfile,
   updateProfile,
-  changePassword
+  changePassword,
+  syncOrcidPublications
 } from '../controllers/authController';
 import { authenticate } from '../middleware/auth';
 import { otpRequestLimiter, otpVerifyLimiter, loginLimiter, registerLimiter } from '../middleware/otpRateLimiter';
@@ -53,6 +54,7 @@ router.post(
   uploadProfilePicture
 );
 router.put('/profile', authenticate, updateProfile);
+router.post('/profile/orcid/sync', authenticate, syncOrcidPublications);
 router.put('/change-password', authenticate, changePassword);
 router.get('/validate-token', authenticate, (req, res) => {
   res.json({ valid: true, user: (req as any).user });
