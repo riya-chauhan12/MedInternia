@@ -719,9 +719,20 @@ export default function Register() {
                     {form.userType === 'patient' && (
                       <Fade in timeout={600}>
                         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, columnGap: 2 }}>
-                          <TextField label="Emergency Contact Name" name="emergencyContactName" fullWidth margin="normal" value={form.emergencyContactName} onChange={handleChange} sx={authFieldSx} />
+                          <Typography
+                             variant="h6"
+                              sx={{
+                              gridColumn: "1 / -1",
+                              mt: 2,
+                              mb: 1,
+                              fontWeight: 600,
+                           }}
+>
+                           Emergency Contact Details
+                          </Typography>
+                          <TextField label="Name" name="emergencyContactName" fullWidth margin="normal" value={form.emergencyContactName} onChange={handleChange} sx={authFieldSx} />
                           <TextField
-                            label="Emergency Contact Phone"
+                            label="Phone Number"
                             name="emergencyContactPhone"
                             fullWidth
                             margin="normal"
@@ -734,7 +745,7 @@ export default function Register() {
                           />
                           <TextField
                             select
-                            label="Emergency Contact Relationship"
+                            label="Relationship"
                             name="emergencyContactRelationship"
                             fullWidth
                             margin="normal"
