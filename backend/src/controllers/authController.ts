@@ -264,6 +264,9 @@ export const verifyOtp = asyncHandler(async (req: Request, res: Response) => {
   if (!result.valid) {
     throw new AppError(result.message || 'Invalid OTP', 400);
   }
+
+  await User.findOneAndUpdate({ email }, { isVerified: true });
+
   res.json({ success: true });
 });
 
