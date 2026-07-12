@@ -1,3 +1,4 @@
+
 import { createAndEmitNotification } from "./notificationController";
 import { Response } from "express";
 import Case, { ICase } from "../models/Case";
@@ -10,7 +11,8 @@ import {
 } from "../services/aiCasePostingService";
 import { asyncHandler } from "../utils/asyncHandler";
 import { AppError } from "../utils/AppError";
-
+import { extractEntities } from "../services/nerService";
+import { extractSymptoms } from "../services/symptomExtractionService";
 const canModerateComments = (userType?: string) =>
   ["admin", "doctor", "moderator"].includes(userType ?? "");
 const canAddCaseFollowUp = (userType?: string) =>
@@ -197,7 +199,7 @@ export const replyToComment = asyncHandler(
           c.author.toString() === user._id.toString() &&
           c.content === content.trim() &&
           c.replyTo?.toString() ===
-            (parentComment._id as string | { toString(): string }).toString(),
+          (parentComment._id as string | { toString(): string }).toString(),
       )
     ) {
       throw new AppError("Duplicate reply detected", 409);
@@ -326,7 +328,7 @@ export const rateComment = asyncHandler(
       else
         comment.rating = Math.round(
           ((comment.rating ?? 0) * comment.ratedBy.length) /
-            (comment.ratedBy.length + 1),
+          (comment.ratedBy.length + 1),
         );
       rated = false;
     } else {
@@ -336,7 +338,7 @@ export const rateComment = asyncHandler(
       else
         comment.rating = Math.round(
           (comment.rating * (comment.ratedBy.length - 1) + rating) /
-            comment.ratedBy.length,
+          comment.ratedBy.length,
         );
       rated = true;
     }
@@ -378,9 +380,31 @@ export const createCase = asyncHandler(
       difficulty,
       specialization,
     } = req.body;
+              let entities;
+
+    try {
+      entities = await extractEntities(description);
+    }
+    catch (error) {
+      console.error("NER service failed:", error);
+
+      const symptoms = extractSymptoms(description);
+
+      entities = {
+        entities: symptoms.map((symptom) => ({
+          text: symptom,
+          label: "SYMPTOM",
+          score: 1,
+          start: 0,
+          end: 0,
+        })),
+      };
+    }
+
 
     // Restrict patient case creation
     if (user.userType === "patient") {
+
       // Patients can't set diagnosis, treatment, or difficulty
       // These will be limited or undefined
       const newCase = new Case({
@@ -390,6 +414,7 @@ export const createCase = asyncHandler(
         patientInfo: patientInfo || {},
         images: images || [],
         tags: tags || [],
+        entities: entities.entities,
         difficulty: "beginner", // Default for patient cases
         specialization: "General Medicine", // Default for patients
         doctor: user._id as any,
@@ -425,6 +450,7 @@ export const createCase = asyncHandler(
 
     // Doctor case creation (full features)
     const newCase = new Case({
+
       title,
       description,
       symptoms: symptoms || [],
@@ -433,8 +459,10 @@ export const createCase = asyncHandler(
       treatment,
       images: images || [],
       tags: tags || [],
+      entities: entities.entities,
       difficulty,
       specialization: specialization || user.specialization,
+
       doctor: user._id as any,
       isPatientCase: false,
       moderationStatus: "approved",
@@ -613,6 +641,14 @@ export const updateCase = asyncHandler(
     }
 
     const updates = req.body;
+    if (updates.description) {
+  try {
+    const result = await extractEntities(updates.description);
+    updates.entities = result.entities;
+  } catch (error) {
+    console.error("NER service failed:", error);
+  }
+}
     delete updates.doctor; // Prevent changing the doctor
     delete updates.comments; // Comments are handled separately
     delete updates.likes; // Likes are handled separately

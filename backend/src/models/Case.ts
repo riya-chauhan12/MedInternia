@@ -53,6 +53,15 @@ export interface ICase extends Document {
     images?: string[];
     createdAt: Date;
   }[];
+
+  entities?: {
+  text: string;
+  label: string;
+  score: number;
+  start: number;
+  end: number;
+}[];
+
   aiSuggestions?: {
     suggestedCases: mongoose.Types.ObjectId[];
     relevanceScore: number;
@@ -258,6 +267,23 @@ const CaseSchema = new Schema<ICase>({
       default: Date.now
     }
   }],
+  entities: [{
+  text: {
+    type: String
+  },
+  label: {
+    type: String
+  },
+  score: {
+    type: Number
+  },
+  start: {
+    type: Number
+  },
+  end: {
+    type: Number
+  }
+}],
   aiSuggestions: {
     suggestedCases: [{
       type: Schema.Types.ObjectId,

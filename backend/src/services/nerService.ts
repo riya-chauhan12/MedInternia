@@ -13,9 +13,9 @@
  *   // result.entities, result.entity_counts, result.processing_time_ms
  */
 
-const NER_SERVICE_URL =
-  process.env.NER_SERVICE_URL ?? "http://localhost:8001";
 
+const NER_SERVICE_URL =
+  process.env.NLP_SERVICE_URL ?? "http://localhost:8001";
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
