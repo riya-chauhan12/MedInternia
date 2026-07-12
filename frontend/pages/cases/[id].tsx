@@ -533,15 +533,39 @@ export default function CaseDiscussion({ id: propId, modalMode, hideDescription 
                     ml: 'auto',
                     borderRadius: '10px',
                     fontWeight: 700,
-                    bgcolor: '#10b981',
-                    boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)',
+                    textTransform: 'none',
+                    px: 3,
+                    boxShadow: '0 4px 14px 0 rgba(34,197,94,0.39)',
                     '&:hover': {
-                      bgcolor: '#059669',
-                      boxShadow: '0 6px 16px rgba(16, 185, 129, 0.35)',
+                      boxShadow: '0 6px 20px rgba(34,197,94,0.4)',
                     }
                   }}
                 >
                   Mark as Solved
+                </Button>
+              )}
+
+              {/* Virtual Consult Room Button */}
+              {userId && (
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={() => router.push(`/cases/${id}/consult`)}
+                  sx={{
+                    ml: isSolved ? 'auto' : 1,
+                    borderRadius: '10px',
+                    fontWeight: 700,
+                    textTransform: 'none',
+                    px: 3,
+                    bgcolor: '#4f46e5',
+                    boxShadow: '0 4px 14px 0 rgba(79,70,229,0.39)',
+                    '&:hover': {
+                      bgcolor: '#4338ca',
+                      boxShadow: '0 6px 20px rgba(79,70,229,0.4)',
+                    }
+                  }}
+                >
+                  Open Consult Room
                 </Button>
               )}
             </Stack>
