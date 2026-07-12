@@ -47,16 +47,16 @@ export default function WebinarTranscriptDemo() {
               borderRadius: 4, overflow: 'hidden', bgcolor: 'black', 
               position: 'relative', aspectRatio: '16/9'
             }}>
-              <iframe
+              <video
                 width="100%"
                 height="100%"
-                src="https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=0&rel=0"
-                title="Webinar Video"
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-                style={{ position: 'absolute', top: 0, left: 0 }}
-              />
+                controls
+                style={{ position: 'absolute', top: 0, left: 0, objectFit: 'cover' }}
+                poster="https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&q=80&w=1200"
+              >
+                <source src="http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4" type="video/mp4" />
+                Your browser does not support the video tag.
+              </video>
             </Paper>
             
             <Box sx={{ mt: 4 }}>
