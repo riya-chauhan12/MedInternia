@@ -8,6 +8,7 @@ import PushPinIcon from '@mui/icons-material/PushPin';
 import LockIcon from '@mui/icons-material/Lock';
 import {getCurrentUserRole} from "../utils/permissions";
 import BookmarkButton from './BookmarkButton';
+import api from "../utils/api";
 
 // Helper to get owner name from doctor field
 function getOwnerName(caseData: any) {

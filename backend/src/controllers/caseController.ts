@@ -21,6 +21,7 @@ import { extractSymptoms } from "../services/symptomExtractionService";
 
 import { uploadCaseAttachment } from "../utils/cloudinary";
 
+
 const canModerateComments = (userType?: string) =>
   ["admin", "doctor", "moderator"].includes(userType ?? "");
 const canAddCaseFollowUp = (userType?: string) =>
@@ -1098,6 +1099,76 @@ export const toggleLike = asyncHandler(
       },
     });
   },
+);
+// Toggle Star / Unstar
+export const toggleStar = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const user = req.user;
+
+    if (!user) {
+      throw new AppError("User not authenticated", 401);
+    }
+
+    const { id } = req.params;
+
+    const caseData = await Case.findById(id);
+
+    if (!caseData) {
+      throw new AppError("Case not found", 404);
+    }
+
+    const userId = user._id.toString();
+
+    const index = caseData.starredBy.findIndex(
+      (u) => u.toString() === userId
+    );
+
+    let isStarred = false;
+
+    if (index >= 0) {
+      caseData.starredBy.splice(index, 1);
+      isStarred = false;
+    } else {
+      caseData.starredBy.push(user._id as any);
+      isStarred = true;
+    }
+
+    await caseData.save();
+
+    res.json({
+      success: true,
+      message: isStarred ? "Case starred" : "Case unstarred",
+      data: {
+        isStarred,
+        totalStars: caseData.starredBy.length,
+      },
+    });
+  }
+);
+
+// Get all starred cases
+export const getStarredCases = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const user = req.user;
+
+    if (!user) {
+      throw new AppError("User not authenticated", 401);
+    }
+
+    const cases = await Case.find({
+      starredBy: user._id,
+      isActive: true,
+    })
+      .populate("doctor", "firstName lastName specialization")
+      .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      data: {
+        cases,
+      },
+    });
+  }
 );
 // Get cases liked by the current user (for profile "Liked Items" section)
 export const getLikedCases = asyncHandler(

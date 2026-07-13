@@ -62,6 +62,7 @@ router.get('/recommended', authenticate, getRecommendedCases);
 router.get('/', optionalAuthenticate, getCases);
 router.get('/my/cases', authenticate, getMyCases);
 router.get('/liked', authenticate, getLikedCases);
+router.get('/starred', authenticate, getStarredCases);
 router.post('/:id/solve', authenticate, solveCase);
 router.get('/moderation/queue', authenticate, requirePermission('comment:moderate'), getCaseModerationQueue);
 router.get('/comments/moderation/queue', authenticate, requirePermission('comment:moderate'), getFlaggedComments);
