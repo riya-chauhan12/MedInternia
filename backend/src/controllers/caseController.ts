@@ -930,6 +930,76 @@ export const toggleLike = asyncHandler(
     });
   },
 );
+// Star/Unstar case
+export const toggleStar = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const user = req.user;
+    const { id } = req.params;
+
+    if (!user) {
+      throw new AppError("User not authenticated", 401);
+    }
+
+    const caseData = await Case.findById(id);
+
+    if (!caseData) {
+      throw new AppError("Case not found", 404);
+    }
+
+    if (!caseData.isActive) {
+      throw new AppError("Case is no longer available", 404);
+    }
+
+    const userIdString = user._id?.toString();
+    const starIndex = caseData.starredBy.findIndex(
+      (starrer) => starrer.toString() === userIdString,
+    );
+
+    let isStarred = false;
+
+    if (starIndex > -1) {
+      // Unstar
+      caseData.starredBy.splice(starIndex, 1);
+      isStarred = false;
+    } else {
+      // Star
+      caseData.starredBy.push(user._id as any);
+      isStarred = true;
+    }
+
+    await caseData.save();
+
+    res.json({
+      success: true,
+      message: isStarred
+        ? "Case starred successfully"
+        : "Case unstarred successfully",
+      data: {
+        isStarred,
+        totalStars: caseData.starredBy.length,
+      },
+    });
+  },
+);
+
+// Get cases starred by the current user (for profile "Starred" section)
+export const getStarredCases = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const user = req.user as { _id: string } | undefined;
+    if (!user) {
+      throw new AppError("User not authenticated", 401);
+    }
+
+    const cases = await Case.find({ starredBy: user._id, isActive: true })
+      .populate("doctor", "firstName lastName specialization")
+      .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      data: { cases },
+    });
+  },
+);
 
 // Get cases by current doctor
 export const getMyCases = asyncHandler(

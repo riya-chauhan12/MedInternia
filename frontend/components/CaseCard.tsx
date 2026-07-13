@@ -6,6 +6,7 @@ import StarRoundedIcon from '@mui/icons-material/StarRounded';
 import PushPinOutlinedIcon from '@mui/icons-material/PushPinOutlined';
 import PushPinIcon from '@mui/icons-material/PushPin';
 import {getCurrentUserRole} from "../utils/permissions";
+import api from "../utils/api";
 
 // Helper to get owner name from doctor field
 function getOwnerName(caseData: any) {
@@ -32,29 +33,30 @@ function getOwnerAvatar(caseData: any) {
 
 export default function CaseCard({ caseData, onOpenDiscussion, onReadMore, isExpanded }: { caseData: any, onOpenDiscussion?: (caseId: string) => void, onReadMore?: () => void, isExpanded?: boolean }) {
   const [starred, setStarred] = useState(false);
+  const [starring, setStarring] = useState(false);
   const [showPinned, setShowPinned] = useState(false);
   const userRole = getCurrentUserRole();
 
-  useEffect(() => {
-    setStarred(!!caseData.isStarred);
-  }, [caseData]);
+  const userId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null;
 
-  const handleStarClick = () => {
-    setStarred(prev => !prev);
-    if (!starred && window && window.localStorage) {
-      try {
-        const starredCases = JSON.parse(localStorage.getItem('starredCases') || '[]');
-        localStorage.setItem('starredCases', JSON.stringify([...starredCases, caseData._id]));
-      } catch {
-        localStorage.setItem('starredCases', JSON.stringify([caseData._id]));
-      }
-    } else if (starred && window && window.localStorage) {
-      try {
-        const starredCases = JSON.parse(localStorage.getItem('starredCases') || '[]');
-        localStorage.setItem('starredCases', JSON.stringify(starredCases.filter((id: string) => id !== caseData._id)));
-      } catch {
-        localStorage.setItem('starredCases', JSON.stringify([]));
-      }
+  useEffect(() => {
+    const starredBy = caseData.starredBy || [];
+    setStarred(userId ? starredBy.some((id: any) => id.toString() === userId) : false);
+  }, [caseData, userId]);
+
+  const handleStarClick = async () => {
+    if (starring) return;
+    setStarring(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await api.post(`/cases/${caseData._id}/star`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setStarred(res.data.data.isStarred);
+    } catch (err) {
+      console.error('Failed to star case', err);
+    } finally {
+      setStarring(false);
     }
   };
 
@@ -141,6 +143,7 @@ export default function CaseCard({ caseData, onOpenDiscussion, onReadMore, isExp
             <Tooltip title={starred ? 'Unstar' : 'Star'}>
               <IconButton
                 onClick={handleStarClick}
+                disabled={starring}
                 sx={{
                   color: starred ? '#FFD700' : '#0072ff',
                   transition: 'color 0.2s, transform 0.18s',

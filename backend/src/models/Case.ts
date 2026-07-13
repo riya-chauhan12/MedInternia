@@ -36,6 +36,7 @@ export interface ICase extends Document {
   doctor: mongoose.Types.ObjectId;
   comments: IComment[];
   likes: mongoose.Types.ObjectId[];
+  starredBy: mongoose.Types.ObjectId[];
   isActive: boolean;
   isPatientCase: boolean; // True if posted by patient
   moderationStatus: 'pending' | 'approved' | 'rejected' | 'changes_requested';
@@ -191,6 +192,10 @@ const CaseSchema = new Schema<ICase>({
   },
   comments: [CommentSchema],
   likes: [{
+    type: Schema.Types.ObjectId,
+    ref: 'User'
+  }],
+  starredBy: [{
     type: Schema.Types.ObjectId,
     ref: 'User'
   }],

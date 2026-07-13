@@ -51,7 +51,7 @@ app.use(helmet());
 const defaultAllowedOrigins = [
   'https://medinternia.vercel.app',
   'https://med-internia.vercel.app',
-  'http://localhost:3000',
+  'http://localhost:3005',
   'http://localhost:3001',
   'http://localhost:5173',
   'http://127.0.0.1:3000',

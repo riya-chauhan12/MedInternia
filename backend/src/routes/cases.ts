@@ -7,6 +7,8 @@ import {
   deleteCase,
   addComment,
   toggleLike,
+  toggleStar,
+  getStarredCases,
   getMyCases,
   addFollowUp,
   getCaseFollowUps,
@@ -40,6 +42,7 @@ const router = express.Router();
 router.get('/recommended', authenticate, getRecommendedCases);
 router.get('/', optionalAuthenticate, getCases);
 router.get('/my/cases', authenticate, getMyCases);
+router.get('/starred', authenticate, getStarredCases);
 router.post('/:id/solve', authenticate, solveCase);
 router.get('/moderation/queue', authenticate, requirePermission('comment:moderate'), getCaseModerationQueue);
 router.get('/comments/moderation/queue', authenticate, requirePermission('comment:moderate'), getFlaggedComments);
@@ -62,6 +65,7 @@ router.post('/:caseId/comments/:commentId/reply', authenticate, requirePermissio
 router.post('/:caseId/comments/:commentId/like', authenticate, likeComment);
 router.post('/:caseId/comments/:commentId/rate', authenticate, requirePermission('rating:create'), rateComment);
 router.post('/:id/like', authenticate, toggleLike);
+router.post('/:id/star', authenticate, toggleStar);
 
 // Follow-up routes
 router.post('/:id/follow-ups', authenticate, requirePermission('case:follow_up'), addFollowUp);
