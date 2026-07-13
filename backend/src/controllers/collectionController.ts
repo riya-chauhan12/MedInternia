@@ -50,7 +50,7 @@ export const getCollectionById = async (req: Request, res: Response): Promise<vo
   try {
     const collection = await Collection.findById(req.params.id).populate({
       path: 'cases',
-      populate: { path: 'author', select: 'firstName lastName profilePicture designation' }
+      populate: { path: 'doctor', select: 'firstName lastName profilePicture specialization' }
     });
     
     if (!collection) {
