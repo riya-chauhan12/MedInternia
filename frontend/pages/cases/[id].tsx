@@ -54,6 +54,11 @@ export default function CaseDiscussion({ id: propId, modalMode, hideDescription 
   const [loading, setLoading] = useState(true);
   const [openReplies, setOpenReplies] = useState<{[key: string]: boolean}>({});
 
+  // NEW: case-level like state
+  const [isLiked, setIsLiked] = useState(false);
+  const [totalLikes, setTotalLikes] = useState(0);
+  const [liking, setLiking] = useState(false);
+
   const userId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null;
   const canModerate = currentUser && ['admin', 'doctor', 'moderator'].includes(currentUser.userType);
 
@@ -85,6 +90,10 @@ export default function CaseDiscussion({ id: propId, modalMode, hideDescription 
         const all = res.data.data.case.comments || [];
         setPinned(all.filter((c: any) => c.pinned));
         setDiscussions(all.filter((c: any) => !c.pinned));
+        // NEW: initialize case-level like state
+        const likes = res.data.data.case.likes || [];
+        setTotalLikes(likes.length);
+        setIsLiked(userId ? likes.some((likeId: any) => likeId.toString() === userId) : false);
         setLoading(false);
       })
       .catch(() => {
@@ -92,6 +101,24 @@ export default function CaseDiscussion({ id: propId, modalMode, hideDescription 
         setLoading(false);
       });
   }, [id]);
+
+  // NEW: toggle case-level like
+  const handleToggleCaseLike = async () => {
+    if (liking) return;
+    setLiking(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await api.post(`/cases/${id}/like`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setIsLiked(res.data.data.isLiked);
+      setTotalLikes(res.data.data.totalLikes);
+    } catch {
+      setError('Failed to like case');
+    } finally {
+      setLiking(false);
+    }
+  };
 
   const handleLike = async (commentId: string) => {
     try {
@@ -516,6 +543,20 @@ export default function CaseDiscussion({ id: propId, modalMode, hideDescription 
                   Published {caseData.createdAt ? new Date(caseData.createdAt).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }) : ''}
                 </Typography>
               </Box>
+
+              {/* NEW: Case-level Like button */}
+              <Tooltip title={isLiked ? 'Unlike this case' : 'Like this case'}>
+                <IconButton
+                  onClick={handleToggleCaseLike}
+                  disabled={liking}
+                  sx={{ color: isLiked ? 'primary.main' : 'text.disabled' }}
+                >
+                  <ThumbUpAltOutlinedIcon />
+                </IconButton>
+              </Tooltip>
+              <Typography variant="body2" color="text.secondary" fontWeight={600} sx={{ mr: userId && !isSolved ? 0 : 'auto' }}>
+                {totalLikes}
+              </Typography>
 
               {/* Mark as Solved Button */}
               {userId && !isSolved && (

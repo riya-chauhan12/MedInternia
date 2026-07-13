@@ -1,12 +1,10 @@
 import { useState } from 'react';
 import { Container, Typography, TextField, Button, Box, Alert } from '@mui/material';
 import api from '../../utils/api';
-
 export default function LikeCase() {
   const [caseId, setCaseId] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-
   const handleLike = async () => {
     setError('');
     setSuccess('');
@@ -20,7 +18,6 @@ export default function LikeCase() {
       setError(err.response?.data?.message || 'Failed to like case');
     }
   };
-
   return (
     <Container maxWidth="sm">
       <Box sx={{ my: 4 }}>

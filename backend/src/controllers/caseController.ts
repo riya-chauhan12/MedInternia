@@ -930,6 +930,24 @@ export const toggleLike = asyncHandler(
     });
   },
 );
+// Get cases liked by the current user (for profile "Liked Items" section)
+export const getLikedCases = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const user = req.user as { _id: string } | undefined;
+    if (!user) {
+      throw new AppError("User not authenticated", 401);
+    }
+
+    const cases = await Case.find({ likes: user._id, isActive: true })
+      .populate("doctor", "firstName lastName specialization")
+      .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      data: { cases },
+    });
+  },
+);
 
 // Get cases by current doctor
 export const getMyCases = asyncHandler(

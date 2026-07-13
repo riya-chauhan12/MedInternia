@@ -7,6 +7,7 @@ import {
   deleteCase,
   addComment,
   toggleLike,
+  getLikedCases,
   getMyCases,
   addFollowUp,
   getCaseFollowUps,
@@ -40,6 +41,7 @@ const router = express.Router();
 router.get('/recommended', authenticate, getRecommendedCases);
 router.get('/', optionalAuthenticate, getCases);
 router.get('/my/cases', authenticate, getMyCases);
+router.get('/liked', authenticate, getLikedCases);
 router.post('/:id/solve', authenticate, solveCase);
 router.get('/moderation/queue', authenticate, requirePermission('comment:moderate'), getCaseModerationQueue);
 router.get('/comments/moderation/queue', authenticate, requirePermission('comment:moderate'), getFlaggedComments);
@@ -50,7 +52,7 @@ router.post('/', authenticate, requirePermission('case:create'), createCase);
 router.post('/ai-posts/schedule', authenticate, requirePermission('case:create'), scheduleAICasePost);
 router.patch('/ai-posts/:scheduleId/review', authenticate, requirePermission('comment:moderate'), reviewAICasePost);
 router.post('/ai-posts/publish-due', authenticate, requirePermission('comment:moderate'), publishDueAICasePosts);
-router.get('/:id', optionalAuthenticate, getCaseById);
+router.get('/:id', optionalAuthenticate, getCaseById);   // ← single dynamic GET route, kept after all literal ones
 router.put('/:id', authenticate, requirePermission('case:update'), updateCase);
 router.delete('/:id', authenticate, requirePermission('case:delete'), deleteCase);
 router.patch('/:id/moderation', authenticate, requirePermission('comment:moderate'), moderateCase);
@@ -80,4 +82,5 @@ router.get('/:caseId/pinned-comments', authenticate, getPinnedComments);
 router.patch('/:id/repost-permission', authenticate, requirePermission('case:update'), toggleRepostPermission);
 // Repost a case (if allowed)
 router.post('/:id/repost', authenticate, requirePermission('case:repost'), repostCase);
+
 export default router;
