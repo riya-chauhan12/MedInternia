@@ -23,6 +23,7 @@ import DatasetIcon from '@mui/icons-material/Dataset';
 import Image from 'next/image';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
+import TranscriptIcon from '@mui/icons-material/DescriptionOutlined';
 import WorkIcon from '@mui/icons-material/Work';
 import VideocamIcon from '@mui/icons-material/Videocam';
 import MenuIcon from '@mui/icons-material/Menu';
@@ -215,8 +216,9 @@ export default function Navbar({ route }: { route?: string }) {
 
   const navItems = [
     ...(isLoggedIn
-      ? [{ href: '/cases', icon: <FolderOpenIcon />, label: t('navbar.cases') }]
+      ? [{ href: '/cases', icon: <FolderOpenIcon />, label: t('navbar.cases', 'Cases') }]
       : []),
+    { href: '/webinar-demo', icon: <TranscriptIcon />, label: 'Webinar Transcripts' },
     { href: '/learning-paths', icon: <BookIcon />, label: t('navbar.learningPaths') },
     { href: '/patients', icon: <DatasetIcon />, label: t('navbar.patients') },
     { href: '/doctors', icon: <WorkIcon />, label: t('navbar.doctors') },
@@ -229,8 +231,9 @@ export default function Navbar({ route }: { route?: string }) {
 
   const mobileNavItems = [
     ...(isLoggedIn
-      ? [{ href: '/cases', icon: <FolderOpenIcon />, label: t('navbar.cases') }]
+      ? [{ href: '/cases', icon: <FolderOpenIcon />, label: t('navbar.cases', 'Cases') }]
       : []),
+    { href: '/webinar-demo', icon: <TranscriptIcon />, label: 'Webinar Transcripts' },
     { href: '/learning-paths', icon: <BookIcon />, label: t('navbar.learningPaths') },
     { href: '/patients', icon: <DatasetIcon />, label: t('navbar.patients') },
     { href: '/doctors', icon: <WorkIcon />, label: t('navbar.doctors') },
@@ -409,6 +412,7 @@ export default function Navbar({ route }: { route?: string }) {
             />
             <Typography
               variant="h6"
+              suppressHydrationWarning
               sx={{
                 fontWeight: 700,
                 letterSpacing: 0.5,
@@ -416,7 +420,7 @@ export default function Navbar({ route }: { route?: string }) {
                 color: 'text.primary',
               }}
             >
-              {t('navbar.brand')}
+              {t('navbar.brand', 'MedInternia')}
             </Typography>
           </Box>
 
