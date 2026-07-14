@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-import express, { Application, Request, Response } from 'express';
+import express, { Application, Request, Response, NextFunction } from 'express';
 import http from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import { setSocketIO } from './utils/socket';
@@ -10,11 +10,31 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
-import mongoSanitize from 'express-mongo-sanitize';
 import connectDB from './utils/database';
 import { createDefaultBadges } from './utils/createDefaultBadges';
 import apiRoutes from './routes/api';
 import { errorHandler } from './middleware/errorHandler';
+
+function sanitizeObject(obj: any, path = ''): void {
+  if (!obj || typeof obj !== 'object') return;
+  for (const key of Object.keys(obj)) {
+    if (key.startsWith('$') || key.includes('.')) {
+      console.warn(`Sanitized suspicious key: ${path}${key}`);
+      delete obj[key];
+    } else if (typeof obj[key] === 'object' && obj[key] !== null) {
+      sanitizeObject(obj[key], `${path}${key}.`);
+    }
+  }
+}
+
+function mongoSanitizeMiddleware(req: Request, _res: Response, next: NextFunction) {
+  sanitizeObject(req.body);
+  sanitizeObject(req.params);
+  sanitizeObject(req.query);
+  next();
+}
+
+
 
 // Process-level handlers to prevent crash-induced state loss
 process.on('unhandledRejection', (reason: unknown) => {
@@ -123,12 +143,7 @@ app.use(cookieParser());
 
 // Sanitize request data to prevent NoSQL injection attacks
 // Removes prohibited characters from keys and values (e.g., $ and .)
-app.use(mongoSanitize({
-  replaceWith: '_',
-  onSanitize: ({ req, key }) => {
-    console.warn(`Sanitized suspicious key in ${req.method} ${req.path}: ${key}`);
-  }
-}));
+app.use(mongoSanitizeMiddleware);
 
 // Routes
 app.get('/health', (req: Request, res: Response) => {
