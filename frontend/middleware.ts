@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const PROTECTED_ROUTES = ['/dashboard', '/profile', '/cases/create', '/certificates/create'];
+const PUBLIC_ROUTES = ['/', '/about', '/contact', '/faq', '/privacy', '/terms'];
 const AUTH_ROUTES = ['/auth/login', '/auth/register'];
 
 export function middleware(request: NextRequest) {
@@ -18,17 +18,31 @@ export function middleware(request: NextRequest) {
     if (token) {
       return NextResponse.redirect(new URL('/dashboard', request.url));
     }
+    return NextResponse.next();
   }
 
-  if (PROTECTED_ROUTES.some(route => pathname.startsWith(route))) {
-    if (!token) {
-      return NextResponse.redirect(new URL('/auth/login', request.url));
-    }
+  // Allow public routes
+  if (PUBLIC_ROUTES.includes(pathname)) {
+    return NextResponse.next();
+  }
+
+  // All other routes are protected
+  if (!token) {
+    return NextResponse.redirect(new URL('/auth/login', request.url));
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/profile/:path*', '/auth/:path*', '/cases/create', '/certificates/create'],
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - api (API routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - all files with an extension (e.g. .ico, .png, .svg)
+     */
+    '/((?!api|_next/static|_next/image|.*\\.[\\w]+$).*)',
+  ],
 };
