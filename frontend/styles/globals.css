@@ -94,19 +94,6 @@ html {
   box-sizing: border-box;
 }
 
-/* Allow text selection in inputs; disable elsewhere for app-like feel */
-* {
-  user-select: none;
-  -webkit-user-select: none;
-}
-
-input,
-textarea,
-[contenteditable='true'],
-.selectable {
-  user-select: text;
-  -webkit-user-select: text;
-}
 
 body {
   margin: 0;
