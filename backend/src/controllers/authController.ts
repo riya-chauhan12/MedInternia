@@ -136,6 +136,10 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
     throw new AppError('Email verification token is required', 400);
   }
 
+  if (typeof email !== 'string') {
+    throw new AppError("Invalid email format", 400);
+  }
+
   try {
     const decoded = jwt.verify(verificationToken, process.env.JWT_SECRET as string) as any;
     if (decoded.email !== email || decoded.purpose !== 'signup') {
@@ -146,7 +150,8 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
   }
 
   // Check if user already exists
-  const existingUser = await User.findOne({ email });
+  const normalizedEmail = email.toLowerCase().trim();
+  const existingUser = await User.findOne({ email: normalizedEmail });
   if (existingUser) {
     throw new AppError("User with this email already exists", 400);
   }
@@ -160,8 +165,12 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
       );
     }
 
+    if (typeof licenseNumber !== 'string') {
+      throw new AppError("Invalid license number format", 400);
+    }
+
     // Check if license number already exists
-    const existingLicense = await User.findOne({ licenseNumber });
+    const existingLicense = await User.findOne({ licenseNumber: licenseNumber.trim() });
     if (existingLicense) {
       throw new AppError("Doctor with this license number already exists", 409);
     }
@@ -180,7 +189,7 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
   const userData: Partial<IUser> = {
     firstName,
     lastName,
-    email,
+    email: normalizedEmail,
     password,
     userType,
     phone,
@@ -298,8 +307,12 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
     throw new AppError("Email and password are required", 400);
   }
 
+  if (typeof email !== 'string') {
+    throw new AppError("Invalid email format", 400);
+  }
+
   // Find user and include password for comparison
-  const user = await User.findOne({ email }).select("+password +loginAttempts +lockoutUntil");
+  const user = await User.findOne({ email: email.toLowerCase().trim() }).select("+password +loginAttempts +lockoutUntil");
 
   if (!user) {
     throw new AppError("Invalid email or password", 401);
@@ -486,7 +499,10 @@ export const forgotPassword = asyncHandler(
     if (!email) {
       throw new AppError("Email required", 400);
     }
-    const user = await User.findOne({ email });
+    if (typeof email !== 'string') {
+      throw new AppError("Invalid email format", 400);
+    }
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
 
 if (!user) {
     return res.json({
@@ -522,6 +538,9 @@ export const resetPassword = asyncHandler(
     if (!email || !otp || !newPassword) {
       throw new AppError("All fields required", 400);
     }
+    if (typeof email !== 'string') {
+      throw new AppError("Invalid email format", 400);
+    }
     if (newPassword.length < 6) {
       throw new AppError("Password must be at least 6 characters", 400);
     }
@@ -529,7 +548,7 @@ export const resetPassword = asyncHandler(
     if (!result.valid) {
       throw new AppError(result.message || "Invalid OTP", 400);
     }
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
     if (!user) {
       throw new AppError("User not found", 404);
     }
