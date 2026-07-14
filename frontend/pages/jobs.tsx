@@ -199,10 +199,15 @@ export default function Jobs() {
     api
       .get("/jobs", { params })
       .then((res) => {
-        const fetchedJobs = res.data.data.jobs || [];
-        setJobs(fetchedJobs);
+        const fetchedJobs = res.data.data.jobs || res.data.data.jobOpportunities || [];
+        const sortedJobs = [...fetchedJobs].sort((a: any, b: any) => {
+          const scoreA = a.matchPercentage !== undefined ? a.matchPercentage : -1;
+          const scoreB = b.matchPercentage !== undefined ? b.matchPercentage : -1;
+          return scoreB - scoreA;
+        });
+        setJobs(sortedJobs);
         if (!filterSpecialty.length && !filterExperience && !filterRemote && !filterVisa) {
-          setOriginalJobs(fetchedJobs);
+          setOriginalJobs(sortedJobs);
         }
         setLoading(false);
       })
@@ -423,8 +428,29 @@ export default function Jobs() {
                               </IconButton>
                             </Stack>
 
-                            <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                            <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
                               <Chip label={j.status} color={j.status === 'Open' ? 'success' : 'default'} size="small" sx={{ fontWeight: 700 }} />
+                              {j.matchPercentage !== undefined && (
+                                <Chip
+                                  icon={<AutoAwesomeIcon sx={{ fontSize: '14px !important', color: 'inherit !important' }} />}
+                                  label={`${j.matchPercentage}% Match`}
+                                  size="small"
+                                  sx={{
+                                    borderRadius: '6px',
+                                    fontWeight: 700,
+                                    fontSize: '0.75rem',
+                                    backgroundColor: j.matchPercentage >= 80 
+                                      ? '#e6f4ea' 
+                                      : (j.matchPercentage >= 50 ? '#fef7e0' : '#fce8e6'),
+                                    color: j.matchPercentage >= 80 
+                                      ? '#137333' 
+                                      : (j.matchPercentage >= 50 ? '#b06000' : '#c5221f'),
+                                    '& .MuiChip-icon': {
+                                      color: 'inherit !important'
+                                    }
+                                  }}
+                                />
+                              )}
                               {j.salary && <Chip label={j.salary} size="small" variant="outlined" />}
                               <DeadlineCountdown deadline={j.applicationDeadline} />
                             </Box>
@@ -501,7 +527,30 @@ export default function Jobs() {
                               </IconButton>
                             </Stack>
                             <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mt: 3 }}>
-                              <Chip label={j.status} color={j.status === 'Open' ? 'success' : 'default'} size="small" sx={{ fontWeight: 700 }} />
+                              <Stack direction="row" spacing={1} alignItems="center">
+                                <Chip label={j.status} color={j.status === 'Open' ? 'success' : 'default'} size="small" sx={{ fontWeight: 700 }} />
+                                {j.matchPercentage !== undefined && (
+                                  <Chip
+                                    icon={<AutoAwesomeIcon sx={{ fontSize: '14px !important', color: 'inherit !important' }} />}
+                                    label={`${j.matchPercentage}% Match`}
+                                    size="small"
+                                    sx={{
+                                      borderRadius: '6px',
+                                      fontWeight: 700,
+                                      fontSize: '0.75rem',
+                                      backgroundColor: j.matchPercentage >= 80 
+                                        ? '#e6f4ea' 
+                                        : (j.matchPercentage >= 50 ? '#fef7e0' : '#fce8e6'),
+                                      color: j.matchPercentage >= 80 
+                                        ? '#137333' 
+                                        : (j.matchPercentage >= 50 ? '#b06000' : '#c5221f'),
+                                      '& .MuiChip-icon': {
+                                        color: 'inherit !important'
+                                      }
+                                    }}
+                                  />
+                                )}
+                              </Stack>
                               <Stack direction="row" spacing={1}>
                                 {j.postedBy && (typeof j.postedBy === 'string' ? j.postedBy : j.postedBy._id) !== currentUserId && (
                                   <Button

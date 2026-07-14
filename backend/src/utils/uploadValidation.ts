@@ -7,6 +7,14 @@ import path from 'path';
 export const ALLOWED_UPLOAD_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'] as const;
 export const ALLOWED_UPLOAD_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.gif'] as const;
 
+export const ALLOWED_RESUME_MIME_TYPES = [
+  'application/pdf',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'text/plain'
+] as const;
+
+export const ALLOWED_RESUME_EXTENSIONS = ['.pdf', '.docx', '.txt'] as const;
+
 /**
  * Validates an uploaded file's MIME type and extension against an allowlist.
  * Both checks must pass -- relying on either alone lets an attacker rename
@@ -40,5 +48,13 @@ export function isAllowedCaseAttachment(originalname: string, mimetype: string):
   return (
     (ALLOWED_CASE_ATTACHMENT_MIME_TYPES as readonly string[]).includes(mimetype) &&
     (ALLOWED_CASE_ATTACHMENT_EXTENSIONS as readonly string[]).includes(ext)
+  );
+}
+
+export function isAllowedResumeUpload(originalname: string, mimetype: string): boolean {
+  const ext = path.extname(originalname).toLowerCase();
+  return (
+    (ALLOWED_RESUME_MIME_TYPES as readonly string[]).includes(mimetype) &&
+    (ALLOWED_RESUME_EXTENSIONS as readonly string[]).includes(ext)
   );
 }

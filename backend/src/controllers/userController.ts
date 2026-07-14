@@ -6,6 +6,7 @@ import UserBadge from '../models/UserBadge';
 import Case from '../models/Case';
 import Certificate from '../models/Certificate';
 import { checkAndAwardAutoBadges } from './badgeController';
+import { extractTextFromBuffer, parseResumeText } from '../services/resumeParserService';
 
 // Define CaseSummary type for recentCases
 interface CaseSummary {
@@ -234,7 +235,7 @@ const ALLOWED_UPDATE_FIELDS = [
   'firstName', 'lastName', 'phone', 'dateOfBirth', 'gender', 'address',
   'bio', 'profilePicture', 'linkedInProfile', 'githubProfile',
   'specialization', 'experience', 'qualifications',
-  'medicalSchool', 'yearOfStudy', 'interests', 'mentorDoctor',
+  'medicalSchool', 'yearOfStudy', 'interests', 'skills', 'mentorDoctor',
   'academicAchievements', 'careerGoals',
   'emergencyContact', 'medicalHistory', 'allergies'
 ];
@@ -770,6 +771,71 @@ export const getPublicProfile = async (req: AuthRequest, res: Response) => {
     res.status(500).json({
       success: false,
       message: 'Internal server error'
+    });
+  }
+};
+
+// Parse uploaded resume and update user profile
+export const parseResume = async (req: AuthRequest, res: Response) => {
+  try {
+    const file = req.file;
+    if (!file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No resume file uploaded'
+      });
+    }
+
+    // 1. Extract raw text
+    const text = await extractTextFromBuffer(file.buffer, file.mimetype, file.originalname);
+    
+    // 2. Parse details
+    const parsedData = parseResumeText(text);
+
+    // 3. Update the logged-in user profile in DB directly
+    const user = await User.findById(req.user!._id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Auto-populate / merge fields
+    if (parsedData.skills && parsedData.skills.length > 0) {
+      user.skills = Array.from(new Set([...(user.skills || []), ...parsedData.skills]));
+    }
+    if (parsedData.medicalSchool && !user.medicalSchool) {
+      user.medicalSchool = parsedData.medicalSchool;
+    }
+    if (parsedData.experience > 0 && !user.experience) {
+      user.experience = parsedData.experience;
+    }
+    if (parsedData.bio && (!user.bio || user.bio.length < 50)) {
+      user.bio = parsedData.bio;
+    }
+
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Resume parsed and profile updated successfully',
+      data: {
+        extracted: parsedData,
+        user: {
+          skills: user.skills,
+          medicalSchool: user.medicalSchool,
+          experience: user.experience,
+          bio: user.bio
+        }
+      }
+    });
+
+  } catch (error: any) {
+    console.error('Resume parsing error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Internal server error during resume parsing'
     });
   }
 };

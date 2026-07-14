@@ -1,5 +1,5 @@
 import { Response } from "express";
-import { updateJobOpportunity, deleteJobOpportunity } from "../jobController";
+import { updateJobOpportunity, deleteJobOpportunity, calculateMatchScore } from "../jobController";
 import { AuthRequest } from "../../middleware/auth";
 import JobOpportunity from "../../models/JobOpportunity";
 
@@ -117,6 +117,50 @@ describe("Job Controller ownership checks (issue #410)", () => {
 
             expect(mockedJobOpportunity.findByIdAndDelete).toHaveBeenCalledWith("job-123");
             expect(res.status).not.toHaveBeenCalledWith(404);
+        });
+    });
+
+    describe("calculateMatchScore", () => {
+        it("returns 100% match when user meets all requirements", () => {
+            const user = {
+                skills: ["surgery", "cpr"],
+                interests: ["pediatrics"],
+                experience: 3,
+                medicalSchool: "Harvard Medical School"
+            };
+            const job = {
+                requirements: {
+                    skills: ["surgery"],
+                    yearsOfExperience: 2,
+                    education: "Medical School"
+                }
+            };
+            const score = calculateMatchScore(user, job);
+            expect(score).toBe(100);
+        });
+
+        it("scales scoring correctly based on partial matches", () => {
+            const user = {
+                skills: ["cpr"],
+                experience: 1,
+                medicalSchool: "Harvard Medical School"
+            };
+            const job = {
+                requirements: {
+                    skills: ["surgery", "cpr"], // 1 of 2 matches = 50% * 0.6 = 30%
+                    yearsOfExperience: 2,       // 1 of 2 experience = 50% * 0.2 = 10%
+                    education: "Medical School" // matches = 100% * 0.2 = 20%
+                }
+            };
+            const score = calculateMatchScore(user, job);
+            expect(score).toBe(60); // 30% + 10% + 20% = 60%
+        });
+
+        it("handles missing requirements or empty user fields gracefully", () => {
+            const user = {};
+            const job = {};
+            const score = calculateMatchScore(user, job);
+            expect(score).toBe(100); // Defaults to 100 if no requirements specified
         });
     });
 });

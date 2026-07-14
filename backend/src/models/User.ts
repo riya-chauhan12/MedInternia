@@ -68,6 +68,7 @@ passwordResetExpires?: Date;
   medicalSchool?: string;
   yearOfStudy?: number;
   interests?: string[];
+  skills?: string[];
   mentorDoctor?: mongoose.Types.ObjectId;
   academicAchievements?: string[];
   careerGoals?: string[];
@@ -322,6 +323,9 @@ passwordResetExpires: {
     }
   },
   interests: [{
+    type: String
+  }],
+  skills: [{
     type: String
   }],
   mentorDoctor: {

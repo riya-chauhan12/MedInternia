@@ -577,18 +577,20 @@ export const createCase = asyncHandler(
     (async () => {
       try {
         const targetSpec = aiAnalysis.specialty || spec;
+        const userObjId = mongoose.Types.ObjectId.isValid(user._id) ? new mongoose.Types.ObjectId(user._id) : user._id;
         const matchedSpecialists = await User.aggregate([
           {
             $match: {
               isVerifiedDoctor: true,
               specialization: targetSpec,
-              _id: { $ne: new mongoose.Types.ObjectId(user._id) }
+              _id: { $ne: userObjId }
             }
           },
           { $sample: { size: 5 } }
         ]);
 
-        for (const specialist of matchedSpecialists) {
+        const specialistsList = Array.isArray(matchedSpecialists) ? matchedSpecialists : [];
+        for (const specialist of specialistsList) {
           await createAndEmitNotification({
             recipientId: specialist._id.toString(),
             type: 'peer_review',

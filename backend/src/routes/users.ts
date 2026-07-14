@@ -14,11 +14,31 @@ import {
   awardPointsToIntern,
   followUser,
   unfollowUser,
-  getConnections
+  getConnections,
+  parseResume
 } from '../controllers/userController';
 import { toggleBookmark, getSavedItems } from '../controllers/userBookmarksController';
+import multer from 'multer';
+import { isAllowedResumeUpload } from '../utils/uploadValidation';
+
+const resumeUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit
+  },
+  fileFilter: (_req, file, cb) => {
+    if (!isAllowedResumeUpload(file.originalname, file.mimetype)) {
+      cb(new Error('Only PDF, DOCX, and TXT files are allowed for resume upload'));
+      return;
+    }
+    cb(null, true);
+  }
+});
 
 const router = Router();
+
+// Parse resume and auto-populate profile
+router.post('/profile/parse-resume', authenticate, resumeUpload.single('resume'), parseResume);
 
 // Get user profile by ID
 router.get('/:userId/profile', authenticate, getUserProfile);
