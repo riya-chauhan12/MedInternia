@@ -1,40 +1,67 @@
 # Healthcare API Documentation
 
 ## Overview
-This is a comprehensive healthcare management API that supports user registration and authentication for both patients and doctors, with proper password encryption and JWT-based authentication.
+MedInternia provides a healthcare and medical learning API for patients, interns, doctors, admins, moderators, and hospital staff.
+
+The backend currently supports:
+- JWT-based authentication
+- Cookie-backed sessions for browser clients
+- Bearer-token authentication for API clients
+- Role-based access control across multiple user types
 
 ## Base URL
-```
+```text
 http://localhost:3000/api
 ```
 
 ## Authentication
-The API uses JWT (JSON Web Tokens) for authentication. Include the token in the Authorization header:
-```
-Authorization: Bearer <your_jwt_token>
-```
+
+The API accepts either of the following for protected routes:
+
+- `Authorization: Bearer <jwt_token>`
+- `token` cookie set by the login or register response
+
+For browser clients, the frontend stores the token in localStorage and also receives an `HttpOnly` cookie from the backend. For API clients, include the JWT in the `Authorization` header.
 
 ## User Types
-- **Patient**: Can manage their own profile and medical information
-- **Doctor**: Can view patient information and manage their professional profile
+
+- `patient`: Can manage their profile, cases, and personal medical information
+- `doctor`: Can create and moderate cases, review content, and manage professional profile data
+- `intern`: Can participate in learning workflows, discussions, and case reviews
+- `admin`: Has elevated access for moderation and user management
+- `moderator`: Can moderate cases and comments
+- `hospital_staff`: Can participate in selected collaboration workflows
 
 ## API Endpoints
 
 ### Authentication Routes (`/api/auth`)
 
-#### 1. Register User
+#### Register User
 ```http
 POST /api/auth/register
 ```
 
-**Request Body for Patient Registration:**
+Creates a new user account and returns:
+- `user`
+- `token`
+- `refreshToken`
+
+The response also sets authentication cookies for browser sessions.
+
+**Common required fields**
 ```json
 {
   "firstName": "Blue",
   "lastName": "Spies",
   "email": "bluespies@gmail.com",
   "password": "Test@123",
-  "userType": "patient",
+  "userType": "patient"
+}
+```
+
+**Patient-specific fields may include**
+```json
+{
   "phone": "9639740956",
   "dateOfBirth": "2008-01-01",
   "gender": "male",
@@ -55,14 +82,9 @@ POST /api/auth/register
 }
 ```
 
-**Request Body for Doctor Registration:**
+**Doctor-specific fields may include**
 ```json
 {
-  "firstName": "Dr. Tanay",
-  "lastName": "Junior",
-  "email": "dr.tanay@hospital.com",
-  "password": "Test@123",
-  "userType": "doctor",
   "phone": "9876543210",
   "dateOfBirth": "1985-05-15",
   "gender": "male",
@@ -80,12 +102,13 @@ POST /api/auth/register
 }
 ```
 
-
-#### 2. Login
+#### Login
 ```http
 POST /api/auth/login
 ```
-**Request Body:**
+
+Returns the same token and cookie behavior as registration.
+
 ```json
 {
   "email": "bluespies@gmail.com",
@@ -93,45 +116,37 @@ POST /api/auth/login
 }
 ```
 
-
-#### 3. Get Profile
+#### Get Profile
 ```http
 GET /api/auth/profile
 ```
-*Requires authentication*
+Requires authentication.
 
-
-#### 4. Update Profile
+#### Update Profile
 ```http
 PUT /api/auth/profile
 ```
-*Requires authentication*
+Requires authentication.
 
-**Request Body:**
-```json
-{
-  "firstName": "Updated Blue",
-  "phone": "9999999999",
-  "address": {
-    "city": "New Delhi",
-    "state": "Delhi"
-  }
-}
-```
-
-#### 5. Change Password
+#### Change Password
 ```http
-POST /api/auth/change-password
+PUT /api/auth/change-password
 ```
-*Requires authentication*
+Requires authentication.
 
-**Request Body:**
-```json
-{
-  "currentPassword": "Test@123",
-  "newPassword": "NewPassword@456"
-}
+> Note: the route is `PUT`, not `POST`.
+
+#### Logout
+```http
+POST /api/auth/logout
 ```
+Requires authentication. This invalidates the current token on the backend and clears the session cookies.
+
+#### Validate Session
+```http
+GET /api/auth/validate-token
+```
+Requires authentication. Returns the current authenticated user.
 
 ### Additional Routes
 
@@ -139,22 +154,18 @@ POST /api/auth/change-password
 ```http
 GET /health
 ```
-*Check server status*
 
 #### API Information
 ```http
 GET /api
 ```
-*Get API information and available endpoints*
 
 ## Security Features
 
-1. **Password Encryption**: All passwords are hashed using bcrypt with salt rounds of 12
-2. **JWT Authentication**: Secure token-based authentication with configurable expiration
-3. **Input Validation**: Comprehensive validation for all user inputs
-4. **Authorization**: Role-based access control for patients and doctors
-5. **Security Headers**: Helmet.js for setting various HTTP headers
-6. **CORS**: Configurable Cross-Origin Resource Sharing
+1. Passwords are hashed with bcrypt
+2. JWT is used for authentication
+3. CORS and Helmet are enabled
+4. Route access is controlled by role-based authorization
 
 ## Environment Variables
 
@@ -168,46 +179,40 @@ NODE_ENV=development
 
 ## Required Fields
 
-### For All Users (Patient & Doctor):
-- ✅ **firstName**: String (required, max 50 characters)
-- ✅ **lastName**: String (required, max 50 characters)
-- ✅ **email**: String (required, unique, valid email format)
-- ✅ **password**: String (required, minimum 6 characters)
-- ✅ **userType**: String (required, either "patient" or "doctor")
+### For All Users
+- `firstName`: required, max 50 characters
+- `lastName`: required, max 50 characters
+- `email`: required, unique, valid email format
+- `password`: required
+- `userType`: required, one of `patient`, `doctor`, `intern`, `admin`, `hospital_staff`, `moderator`
 
-### Optional Fields for All Users:
-- **phone**: String (valid phone number format)
-- **dateOfBirth**: Date (YYYY-MM-DD format)
-- **gender**: String (enum: "male", "female", "other")
-- **address**: Object (street, city, state, zipCode, country)
+### Optional Fields for All Users
+- `phone`
+- `dateOfBirth`
+- `gender`
+- `address`
 
-### Additional Required Fields for Doctors:
-- ✅ **specialization**: String (required for doctors)
-- ✅ **licenseNumber**: String (required for doctors, must be unique)
+### Additional Required Fields for Doctors
+- `specialization`
+- `licenseNumber`
 
-### Additional Optional Fields for Doctors:
-- **experience**: Number (years of experience, minimum 0)
-- **qualifications**: Array of Strings (e.g., ["MBBS", "MD"])
+### Additional Optional Fields for Doctors
+- `experience`
+- `qualifications`
 
-### Additional Optional Fields for Patients:
-- **emergencyContact**: Object (name, phone, relationship)
-- **medicalHistory**: Array of Strings
-- **allergies**: Array of Strings
+### Additional Optional Fields for Patients
+- `emergencyContact`
+- `medicalHistory`
+- `allergies`
 
 ## Getting Started
 
-1. Install MongoDB and ensure it's running
-2. Clone the repository and install dependencies:
-   ```bash
-   npm install
-   ```
-3. Set up environment variables in `.env` file
-4. Start the development server:
-   ```bash
-   npm run dev
-   ```
+1. Install MongoDB and ensure it is running
+2. Clone the repository and install dependencies
+3. Set up environment variables in a `.env` file
+4. Start the development server with `npm run dev`
 5. The API will be available at `http://localhost:3000`
 
 ## Testing
 
-You can test the API using tools like Postman, curl, or any HTTP client. Start by registering a user, then use the returned JWT token for authenticated requests.
+Use Postman, curl, or any HTTP client. Register or log in first, then send the returned token in the `Authorization` header for protected routes.
