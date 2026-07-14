@@ -199,7 +199,7 @@ export default function Jobs() {
     api
       .get("/jobs", { params })
       .then((res) => {
-        const fetchedJobs = res.data.data.jobs || res.data.data.jobOpportunities || [];
+        const fetchedJobs = res.data.data.jobOpportunities || res.data.data.jobs || [];
         const sortedJobs = [...fetchedJobs].sort((a: any, b: any) => {
           const scoreA = a.matchPercentage !== undefined ? a.matchPercentage : -1;
           const scoreB = b.matchPercentage !== undefined ? b.matchPercentage : -1;
