@@ -222,13 +222,8 @@ export default function Register() {
     setError('');
     setOtpError('');
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
-      const res = await fetch(`${backendUrl}/api/auth/send-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: form.email })
-      });
-      const data = await res.json();
+      const res = await api.post('/auth/send-otp', { email: form.email });
+      const data = res.data;
       if (data.success) {
         setOtpModalOpen(true);
       } else {
@@ -244,13 +239,8 @@ export default function Register() {
     setVerifyingOtp(true);
     setOtpError('');
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
-      const res = await fetch(`${backendUrl}/api/auth/verify-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: form.email, otp })
-      });
-      const data = await res.json();
+      const res = await api.post('/auth/verify-otp', { email: form.email, otp });
+      const data = res.data;
       if (data.success) {
         setEmailVerified(true);
         setVerificationToken(data.verificationToken);
