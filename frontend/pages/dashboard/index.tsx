@@ -33,6 +33,7 @@ import {
 } from '@mui/icons-material';
 import api from '../../utils/api';
 import Link from 'next/link';
+import { useRequireAuth } from '../../hooks/useRequireAuth';
 
 interface DashboardData {
   user: any;
@@ -44,96 +45,82 @@ interface DashboardData {
 
 export default function Dashboard() {
   const router = useRouter();
+  const { isReady, userId } = useRequireAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [data, setData] = useState<DashboardData | null>(null);
 
-useEffect(() => {
-  const fetchDashboardData = async () => {
-    try {
-      // Check authentication
-      const token =
-        typeof window !== 'undefined'
-          ? localStorage.getItem('token')
-          : null;
+  useEffect(() => {
+    // Wait until AuthContext has confirmed the user is authenticated
+    // before firing off any requests.
+    if (!isReady || !userId) return;
 
-      const userId =
-        typeof window !== 'undefined'
-          ? localStorage.getItem('userId')
-          : null;
+    const fetchDashboardData = async () => {
+      try {
+        const userRes = await api.get(`/users/${userId}/profile`);
+        const user =
+          userRes.data?.data?.user ||
+          userRes.data?.user ||
+          userRes.data;
 
-      if (!token || !userId) {
-        window.location.href = '/auth/login?clear=1';
-        return;
-      }
+        const optionalRequest = async <T,>(
+          request: Promise<{ data: T }>,
+          fallback: T
+        ) => {
+          try {
+            const response = await request;
+            return response.data;
+          } catch (err: any) {
+            if (err.response?.status === 401) throw err;
+            return fallback;
+          }
+        };
 
-      const userRes = await api.get(`/users/${userId}/profile`);
-      const user =
-        userRes.data?.data?.user ||
-        userRes.data?.user ||
-        userRes.data;
+        const [casesRes, webinarsRes, notificationsRes, badgesRes] =
+          await Promise.all([
+            user.userType === 'doctor'
+              ? optionalRequest(api.get('/cases/my/cases?limit=5'), {
+                  data: { cases: [] }
+                })
+              : Promise.resolve({ data: { cases: [] } }),
+            optionalRequest(api.get('/webinars/my?type=registered'), {
+              data: { webinars: [] }
+            }),
+            optionalRequest(api.get('/notifications'), {
+              notifications: []
+            }),
+            optionalRequest(api.get(`/badges/user/${userId}`), {
+              data: { badges: [] }
+            })
+          ]);
 
-      const optionalRequest = async <T,>(
-        request: Promise<{ data: T }>,
-        fallback: T
-      ) => {
-        try {
-          const response = await request;
-          return response.data;
-        } catch (err: any) {
-          if (err.response?.status === 401) throw err;
-          return fallback;
-        }
-      };
+        const getList = (payload: any, key: string) =>
+          payload?.data?.[key] || payload?.[key] || [];
 
-      const [casesRes, webinarsRes, notificationsRes, badgesRes] =
-        await Promise.all([
-          user.userType === 'doctor'
-            ? optionalRequest(api.get('/cases/my/cases?limit=5'), {
-                data: { cases: [] }
-              })
-            : Promise.resolve({ data: { cases: [] } }),
-          optionalRequest(api.get('/webinars/my?type=registered'), {
-            data: { webinars: [] }
-          }),
-          optionalRequest(api.get('/notifications'), {
-            notifications: []
-          }),
-          optionalRequest(api.get(`/badges/user/${userId}`), {
-            data: { badges: [] }
-          })
-        ]);
-
-      const getList = (payload: any, key: string) =>
-        payload?.data?.[key] || payload?.[key] || [];
-
-      setData({
-        user,
-        cases: getList(casesRes, 'cases'),
-        webinars: getList(webinarsRes, 'webinars'),
-        notifications: getList(notificationsRes, 'notifications').slice(0, 5),
-        badges: getList(badgesRes, 'badges')
-      });
-    } catch (err: any) {
-      console.error('Dashboard fetch error:', err);
-
-      if (err.response?.status === 401) {
-        window.location.href = '/auth/login?clear=1';
-      } else {
+        setData({
+          user,
+          cases: getList(casesRes, 'cases'),
+          webinars: getList(webinarsRes, 'webinars'),
+          notifications: getList(notificationsRes, 'notifications').slice(0, 5),
+          badges: getList(badgesRes, 'badges')
+        });
+      } catch (err: any) {
+        console.error('Dashboard fetch error:', err);
+        // No manual redirect needed here anymore — the global axios
+        // response interceptor already handles 401s consistently.
         setError(
           err.response?.data?.message ||
             'Failed to load dashboard data'
         );
+      } finally {
+        setLoading(false);
       }
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
-  fetchDashboardData();
-}, [router]);
+    fetchDashboardData();
+  }, [isReady, userId]);
 
-  if (loading) {
+  if (!isReady || loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh' }}>
         <CircularProgress size={60} thickness={4.5} />
@@ -325,7 +312,7 @@ useEffect(() => {
               {/* Nested Multi-Column Grid Layout for Main Content */}
               <Grid container spacing={3}>
 
-                {/* Left Side: Recent Activity (Decreased Width to md={7}) */}
+                {/* Left Side: Recent Activity */}
                 <Grid size={{xs:12, md: 7}} component="div">
                   <Card sx={{ borderRadius: 3, boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.05)', height: '100%' }}>
                     <CardContent sx={{ p: 2.5 }}>
@@ -394,7 +381,7 @@ useEffect(() => {
                   </Card>
                 </Grid>
 
-                {/* Right Side: Stacked Side Widgets (Upcoming Webinars & Notifications) */}
+                {/* Right Side: Stacked Side Widgets */}
                 <Grid size={{xs:12, md:5 }} component="div">
                   <Stack spacing={3} sx={{ height: '100%' }}>
 
@@ -448,7 +435,7 @@ useEffect(() => {
                   </Stack>
                 </Grid>
 
-              </Grid> {/* End of Nested Grid */}
+              </Grid>
 
             </Stack>
           </Grid>

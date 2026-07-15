@@ -37,7 +37,10 @@ const api = axios.create({
 // Add interceptor to include JWT token in all requests
 api.interceptors.request.use(
   (config) => {
-    const token = getGlobalToken();
+    // Fall back to localStorage if the in-memory global token hasn't
+    // been hydrated yet (e.g. this is the very first request after a
+    // fresh page load, before AuthContext's mount effect has run).
+    const token = getGlobalToken() || (typeof window !== 'undefined' ? localStorage.getItem('token') : null);
     if (token) {
       config.headers = config.headers || {};
       config.headers['Authorization'] = `Bearer ${token}`;
@@ -46,6 +49,7 @@ api.interceptors.request.use(
   },
   (error) => Promise.reject(error)
 );
+
 let isRedirectingToLogin = false;
 
 api.interceptors.response.use(
@@ -99,8 +103,6 @@ export const createDiary = async (title: string) => {
   return res.data;
 };
 
-// Add a new entry to a diary
-// Add a new entry to a diary
 // Add a new entry to a diary
 export const addDiaryEntry = async (diaryId: string, entry: Record<string, any>) => {
   const res = await api.post(`/diaries/${diaryId}/entries`, entry);

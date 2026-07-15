@@ -24,9 +24,11 @@ import LibraryBooksIcon from '@mui/icons-material/LibraryBooks';
 import VideoLibraryIcon from '@mui/icons-material/VideoLibrary';
 import api from '../../utils/api';
 import Link from 'next/link';
+import { useRequireAuth } from '../../hooks/useRequireAuth';
 
 export default function LearningProgress() {
   const router = useRouter();
+  const { isReady, userId } = useRequireAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [user, setUser] = useState<any>(null);
@@ -34,16 +36,12 @@ export default function LearningProgress() {
   const [savedCases, setSavedCases] = useState<any[]>([]);
 
   useEffect(() => {
+    // Wait until AuthContext has confirmed the user is authenticated
+    // before firing off any requests.
+    if (!isReady || !userId) return;
+
     const fetchLearningData = async () => {
       try {
-        const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-        const userId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null;
-
-        if (!token || !userId) {
-          window.location.href = '/auth/login?clear=1';
-          return;
-        }
-
         // Fetch User profile
         const userRes = await api.get(`/users/${userId}/profile`);
         const userData = userRes.data?.data?.user || userRes.data?.user || userRes.data;
@@ -72,6 +70,8 @@ export default function LearningProgress() {
 
       } catch (err: any) {
         console.error('Learning Progress load error:', err);
+        // No manual redirect needed here anymore — the global axios
+        // response interceptor already handles 401s consistently.
         setError('Failed to load learning progress data.');
       } finally {
         setLoading(false);
@@ -79,9 +79,9 @@ export default function LearningProgress() {
     };
 
     fetchLearningData();
-  }, [router]);
+  }, [isReady, userId]);
 
-  if (loading) {
+  if (!isReady || loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh' }}>
         <CircularProgress size={60} />
