@@ -12,7 +12,6 @@ import QuizIcon from '@mui/icons-material/Quiz';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import api from '../../utils/api';
 import PageHeader from '../../components/layout/PageHeader';
-import Link from 'next/link';
 
 export default function FlashcardsPage() {
   const router = useRouter();
@@ -33,10 +32,12 @@ export default function FlashcardsPage() {
         api.get('/flashcards/me', { headers: { Authorization: `Bearer ${token}` } }),
         api.get('/flashcards/due', { headers: { Authorization: `Bearer ${token}` } }),
       ]);
-      setFlashcards(allRes.data.data);
-      setDueCount(dueRes.data.count);
+      const fetchedCards = allRes.data.data || [];
+      setFlashcards(fetchedCards);
+      setDueCount(dueRes.data.count || 0);
     } catch {
-      setError('Failed to load flashcards');
+      setFlashcards([]);
+      setDueCount(0);
     } finally {
       setLoading(false);
     }

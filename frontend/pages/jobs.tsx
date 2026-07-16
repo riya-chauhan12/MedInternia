@@ -212,7 +212,8 @@ export default function Jobs() {
         setLoading(false);
       })
       .catch(() => {
-        setError("Failed to fetch jobs");
+        setJobs([]);
+        setOriginalJobs([]);
         setLoading(false);
       });
   }, [authChecked, filterSpecialty, filterExperience, filterRemote, filterVisa, smartSearchActive]);

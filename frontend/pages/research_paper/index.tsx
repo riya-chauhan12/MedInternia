@@ -56,9 +56,10 @@ export default function ResearchPaperUpload() {
     setLoading(true);
     try {
       const res = await api.get('/research-papers');
-      setPapers(res.data);
+      const fetchedPapers = Array.isArray(res.data) ? res.data : [];
+      setPapers(fetchedPapers);
     } catch (err) {
-      setError('Failed to fetch research papers.');
+      setPapers([]);
     } finally {
       setLoading(false);
     }
