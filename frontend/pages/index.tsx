@@ -45,8 +45,6 @@ import {
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import CloseIcon from '@mui/icons-material/Close';
-import Brightness4Icon from '@mui/icons-material/Brightness4';
-import Brightness7Icon from '@mui/icons-material/Brightness7';
 import {
   FolderOpen,
   Briefcase,
@@ -454,7 +452,6 @@ export default function HomePage() {
   const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = React.useState(false);
   const [mobileNavOpen, setMobileNavOpen] = React.useState(false);
-  const [isDarkMode, setIsDarkMode] = React.useState(false);
   const [waitlistEmail, setWaitlistEmail] = React.useState('');
   const [waitlistSubmitted, setWaitlistSubmitted] = React.useState(false);
 
@@ -492,30 +489,6 @@ export default function HomePage() {
     },
   };
 
-
-  const featureCardSx = {
-    p: 4,
-    borderRadius: '24px',
-    height: '100%',
-    display: 'flex',
-    flexDirection: 'column',
-    bgcolor: isDarkMode ? '#0f172a' : '#fff',
-    border: isDarkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid #e2e8f0',
-    transition: 'transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease',
-    '&:hover': {
-      transform: 'translateY(-2px)',
-      borderColor: '#0072ff',
-      boxShadow: isDarkMode ? '0 12px 32px rgba(15, 23, 42, 0.3)' : '0 12px 32px rgba(0, 114, 255, 0.1)',
-      '& .explore-underline': { width: '100%' },
-    },
-  };
-
-  const pageBg = isDarkMode ? '#07111f' : '#f8fbff';
-  const surfaceBg = isDarkMode ? '#0f172a' : '#fff';
-  const borderColor = isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)';
-  const textPrimary = isDarkMode ? '#f8fafc' : '#1a202c';
-  const textSecondary = isDarkMode ? '#cbd5e1' : '#4a5568';
-
   // ---- Hero mouse-parallax setup ----
   // Tracks pointer position within the hero section (normalized -0.5..0.5)
   // and drives a handful of differently-weighted transforms so background,
@@ -549,9 +522,8 @@ export default function HomePage() {
   const cardParallaxXInv = useTransform(springX, [-0.5, 0.5], [16, -16]);
   const cardParallaxYInv = useTransform(springY, [-0.5, 0.5], [16, -16]);
 
-
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: pageBg, color: textPrimary, overflowX: 'hidden', maxWidth: '100%' }}>
+    <Box sx={{ minHeight: '100vh', bgcolor: '#f8fbff', overflowX: 'hidden', maxWidth: '100%' }}>
       <Head>
         <title>MedInternia - Your Gateway to Medical Learning</title>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -575,16 +547,11 @@ export default function HomePage() {
           display: isLoggedIn ? 'none' : 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-
-          bgcolor: surfaceBg,
-          borderBottom: `1px solid ${borderColor}`,
-
           background: 'rgba(255, 255, 255, 0.9)',
           backdropFilter: 'blur(10px)',
           WebkitBackdropFilter: 'blur(10px)',
           borderBottom: '1px solid rgba(0,0,0,0.05)',
           zIndex: 1100,
-
         }}
       >
         <Box
@@ -596,7 +563,7 @@ export default function HomePage() {
           onKeyDown={(e) => e.key === 'Enter' && router.push('/')}
         >
           <Image src="/med-internia-logo.jpg" alt="MedInternia Logo" width={36} height={36} style={{ borderRadius: '50%' }} />
-          <Typography variant="h6" fontWeight={800} color={textPrimary} ml={1}>
+          <Typography variant="h6" fontWeight={800} color="#1a202c" ml={1}>
             MedInternia
           </Typography>
         </Box>
@@ -607,7 +574,7 @@ export default function HomePage() {
               <Typography
                 component="a"
                 fontWeight={600}
-                color={textSecondary}
+                color="#4a5568"
                 sx={{
                   textDecoration: 'none',
                   transition: 'color 0.2s',
@@ -622,7 +589,7 @@ export default function HomePage() {
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2 } }}>
           <IconButton
-            sx={{ display: { xs: 'inline-flex', md: 'none' }, color: textPrimary }}
+            sx={{ display: { xs: 'inline-flex', md: 'none' }, color: '#1a202c' }}
             aria-label="Open navigation menu"
             onClick={() => setMobileNavOpen(true)}
           >
@@ -657,19 +624,6 @@ export default function HomePage() {
           >
             Sign Up
           </Button>
-          <IconButton
-            aria-label={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-            onClick={() => setIsDarkMode((prev) => !prev)}
-            sx={{
-              color: '#0072ff',
-              border: '1px solid rgba(0,114,255,0.2)',
-              bgcolor: isDarkMode ? 'rgba(0,114,255,0.08)' : 'transparent',
-              borderRadius: '999px',
-              '&:hover': { bgcolor: 'rgba(0,114,255,0.12)' },
-            }}
-          >
-            {isDarkMode ? <Brightness7Icon /> : <Brightness4Icon />}
-          </IconButton>
         </Box>
       </Box>
 
