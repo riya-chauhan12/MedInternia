@@ -1,5 +1,12 @@
 import express from 'express';
 import { createResearchPaper, getAllResearchPapers, getResearchPaperById } from '../controllers/researchPaperController';
+import {
+  addComment,
+  deleteComment,
+  getComments,
+  likeComment,
+  replyToComment
+} from '../controllers/researchPaperDiscussionController';
 import { authenticate } from '../middleware/auth';
 import { requirePermission } from '../middleware/permissions';
 import path from 'path';
@@ -26,6 +33,12 @@ router.get('/download/:filename', authenticate, (req, res) => {
   }
   return res.status(404).json({ success: false, message: 'File not found' });
 });
+
+router.get('/:id/comments', getComments);
+router.post('/:id/comments', authenticate, requirePermission('comment:create'), addComment);
+router.post('/:paperId/comments/:commentId/reply', authenticate, requirePermission('comment:create'), replyToComment);
+router.post('/:paperId/comments/:commentId/like', authenticate, likeComment);
+router.delete('/:paperId/comments/:commentId', authenticate, deleteComment);
 
 router.get('/:id', getResearchPaperById);
 
