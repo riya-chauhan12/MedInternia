@@ -578,12 +578,11 @@ export default function HomePage() {
 
           bgcolor: surfaceBg,
           borderBottom: `1px solid ${borderColor}`,
-
-          background: 'rgba(255, 255, 255, 0.9)',
           backdropFilter: 'blur(10px)',
           WebkitBackdropFilter: 'blur(10px)',
-          borderBottom: '1px solid rgba(0,0,0,0.05)',
           zIndex: 1100,
+
+
 
         }}
       >
