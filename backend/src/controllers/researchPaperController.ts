@@ -5,7 +5,8 @@ import fs from 'fs';
 
 export const getResearchPaperById = async (req: Request, res: Response) => {
   try {
-    const paper = await ResearchPaper.findById(req.params.id);
+    const paper = await ResearchPaper.findById(req.params.id)
+      .populate('comments.author', 'firstName lastName profilePicture userType');
     if (!paper) return res.status(404).json({ error: 'Research paper not found.' });
     res.json({ data: { paper } });
   } catch (err) {
