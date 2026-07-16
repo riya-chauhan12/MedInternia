@@ -117,9 +117,14 @@ export const markAsRead = asyncHandler(async (req: AuthRequest, res: Response) =
 export const sendMessage = asyncHandler(async (req: AuthRequest, res: Response) => {
   const { receiverId, content } = req.body;
   const senderId = req.user?._id;
+  const trimmedContent = typeof content === 'string' ? content.trim() : '';
 
   if (!senderId) {
     throw new AppError("Unauthorized", 401);
+  }
+
+  if (!trimmedContent) {
+    throw new AppError("Message content is required", 400);
   }
 
   if (senderId.toString() === receiverId) {
@@ -159,10 +164,10 @@ export const sendMessage = asyncHandler(async (req: AuthRequest, res: Response) 
   const message = await Message.create({
     conversationId: conversation._id,
     sender: senderId,
-    content
+    content: trimmedContent
   });
 
-  conversation.lastMessage = content;
+  conversation.lastMessage = trimmedContent;
   conversation.updatedAt = new Date();
   await conversation.save();
 
