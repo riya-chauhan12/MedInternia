@@ -676,6 +676,9 @@ export const votePoll = async (req: AuthRequest, res: Response) => {
     const poll = webinar.polls.find(p => p._id?.toString() === pollId);
     if (!poll) return res.status(404).json({ success: false, message: 'Poll not found' });
     if (!poll.active) return res.status(400).json({ success: false, message: 'Poll is closed' });
+    if (!Number.isInteger(optionIndex) || optionIndex < 0 || optionIndex >= poll.options.length) {
+      return res.status(400).json({ success: false, message: 'Invalid poll option' });
+    }
 
     poll.votes.set(userId, optionIndex);
     await webinar.save();
