@@ -15,7 +15,7 @@ export default function CommentInteraction() {
     setSuccess('');
     try {
       const token = localStorage.getItem('token');
-      await api.post(`/cases/${caseId}/comments/${commentId}/reply`, { text: reply }, {
+      await api.post(`/cases/${caseId}/comments/${commentId}/reply`, { content: reply }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setSuccess('Reply added successfully!');
