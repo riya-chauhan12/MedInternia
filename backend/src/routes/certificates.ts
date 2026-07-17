@@ -5,6 +5,7 @@ import {
   generateCertificate,
   getUserCertificates,
   getCertificateById,
+  getPublicCertificateVerification,
   verifyCertificate,
   getDoctorIssuedCertificates,
   revokeCertificate,
@@ -20,6 +21,7 @@ router.post('/generate', authenticate, requirePermission('certificate:issue'), g
 router.get('/user/:userId', authenticate, getUserCertificates);
 
 // Get certificate by certificate ID
+router.get('/verify/:certificateId', getPublicCertificateVerification);
 router.get('/:certificateId', authenticate, getCertificateById);
 
 // Verify certificate
