@@ -1,9 +1,11 @@
 import { getAuthToken } from "../utils/api";
-import React from 'react';
-import Head from 'next/head';
-import Image from 'next/image';
-import Link from 'next/link';
-import { useRouter } from 'next/router';
+import dynamic from "next/dynamic";
+import { IBM_Plex_Mono, Sora } from "next/font/google";
+import React from "react";
+import Head from "next/head";
+import Image from "next/image";
+import Link from "next/link";
+import { useRouter } from "next/router";
 import {
   motion,
   Variants,
@@ -60,13 +62,32 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { getLoginHref, protectedLandingPaths } from '../utils/authRedirect';
-import HeroProductPreview from '../components/landing/HeroProductPreview';
+const HeroProductPreview = dynamic(
+  () => import("../components/landing/HeroProductPreview"),
+  {
+    loading: () => null,
+  },
+);
+
+const sora = Sora({
+  subsets: ["latin"],
+  weight: ["600", "700", "800"],
+  display: "swap",
+  variable: "--font-sora",
+});
+
+const ibmPlexMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["500", "600"],
+  display: "swap",
+  variable: "--font-ibm-plex-mono",
+});
 
 // Type-safe font stacks for the hero's clinical/vitals-monitor motif.
 // Sora carries the headline, IBM Plex Mono reads like a monitor readout,
 // Inter stays as the neutral body voice.
-const fontDisplay = "'Sora', 'Inter', sans-serif";
-const fontMono = "'IBM Plex Mono', monospace";
+const fontDisplay = "var(--font-sora), 'Inter', sans-serif";
+const fontMono = "var(--font-ibm-plex-mono), monospace";
 
 // Words the animated hero headline cycles through.
 const HERO_HEADLINE_WORDS = [
@@ -108,13 +129,25 @@ function LiveDot({ color = '#00c853', size = 8 }: { color?: string; size?: numbe
  */
 function TypewriterText({ words }: { words: string[] }) {
   const shouldReduceMotion = useReducedMotion();
+  const [animationEnabled, setAnimationEnabled] = React.useState(false);
   const [index, setIndex] = React.useState(0);
-  const [subIndex, setSubIndex] = React.useState(0);
+  const [subIndex, setSubIndex] = React.useState(words[0]?.length ?? 0);
   const [deleting, setDeleting] = React.useState(false);
   const [blink, setBlink] = React.useState(true);
 
   React.useEffect(() => {
     if (shouldReduceMotion) return;
+
+    const timer = window.setTimeout(() => {
+      setAnimationEnabled(true);
+    }, 6500);
+
+    return () => window.clearTimeout(timer);
+  }, [shouldReduceMotion]);
+
+  React.useEffect(() => {
+    if (shouldReduceMotion || !animationEnabled) return;
+
     const current = words[index];
 
     if (!deleting && subIndex === current.length) {
@@ -130,45 +163,65 @@ function TypewriterText({ words }: { words: string[] }) {
 
     const typeTimeout = setTimeout(
       () => setSubIndex((prev) => prev + (deleting ? -1 : 1)),
-      deleting ? 35 : 65
+      deleting ? 35 : 65,
     );
+
     return () => clearTimeout(typeTimeout);
-  }, [subIndex, deleting, index, words, shouldReduceMotion]);
+  }, [
+    subIndex,
+    deleting,
+    index,
+    words,
+    shouldReduceMotion,
+    animationEnabled,
+  ]);
 
   React.useEffect(() => {
     const blinkInterval = setInterval(() => setBlink((prev) => !prev), 500);
     return () => clearInterval(blinkInterval);
   }, []);
 
-  const displayText = shouldReduceMotion ? words[0] : words[index].substring(0, subIndex);
+  const displayText =
+    shouldReduceMotion || !animationEnabled
+      ? words[0]
+      : words[index].substring(0, subIndex);
 
   return (
-    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'baseline' }}>
+    <Box
+      component="span"
+      sx={{ display: "inline-flex", alignItems: "baseline" }}
+    >
       <motion.span
         style={{
-          backgroundImage: 'linear-gradient(90deg, #0072ff, #00c6ff, #4facfe, #00c6ff, #0072ff)',
-          backgroundSize: '300% 100%',
-          WebkitBackgroundClip: 'text',
-          backgroundClip: 'text',
-          color: 'transparent',
+          backgroundImage:
+            "linear-gradient(90deg, #0072ff, #00c6ff, #4facfe, #00c6ff, #0072ff)",
+          backgroundSize: "300% 100%",
+          WebkitBackgroundClip: "text",
+          backgroundClip: "text",
+          color: "transparent",
           fontFamily: fontDisplay,
         }}
-        animate={shouldReduceMotion ? undefined : { backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
-        transition={{ duration: 6, repeat: Infinity, ease: 'linear' }}
+        animate={
+          shouldReduceMotion || !animationEnabled
+            ? undefined
+            : { backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"] }
+        }
+        transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
       >
         {displayText}
       </motion.span>
+
       <Box
         component="span"
         aria-hidden="true"
         sx={{
-          display: 'inline-block',
-          width: '3px',
-          ml: '2px',
-          alignSelf: 'stretch',
-          bgcolor: '#0072ff',
+          display: "inline-block",
+          width: "3px",
+          ml: "2px",
+          alignSelf: "stretch",
+          bgcolor: "#0072ff",
           opacity: blink ? 1 : 0,
-          transition: 'opacity 0.1s',
+          transition: "opacity 0.1s",
         }}
       />
     </Box>
@@ -523,14 +576,21 @@ export default function HomePage() {
   const cardParallaxYInv = useTransform(springY, [-0.5, 0.5], [16, -16]);
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: '#f8fbff', overflowX: 'hidden', maxWidth: '100%' }}>
+    <Box
+      component="main"
+      className={`${sora.variable} ${ibmPlexMono.variable}`}
+      sx={{
+        minHeight: "100vh",
+        bgcolor: "#f8fbff",
+        overflowX: "hidden",
+        maxWidth: "100%",
+      }}
+    >
       <Head>
         <title>MedInternia - Your Gateway to Medical Learning</title>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap"
-          rel="stylesheet"
+        <meta
+          name="description"
+          content="MedInternia is a medical learning and career platform for clinical cases, webinars, internships, collaboration, and healthcare opportunities."
         />
       </Head>
 
@@ -677,7 +737,7 @@ export default function HomePage() {
         <HeroBackground parallaxX={bgParallaxX} parallaxY={bgParallaxY} />
 
         <Container maxWidth="xl" sx={{ pt: { xs: 6, md: 12 }, pb: { xs: 8, md: 12 }, position: 'relative', zIndex: 1 }}>
-          <Grid container spacing={6} aria-label="Hero contents layout layout container grid" alignItems="center">
+          <Grid container spacing={6} alignItems="center">
             <Grid size={{ xs: 12, md: 6 }}>
               <motion.div initial="hidden" animate="visible" variants={staggerContainer}>
                 {/* Eyebrow: slides in from the left, sets the "vitals monitor" tone */}
@@ -853,10 +913,21 @@ export default function HomePage() {
                           WebkitBackdropFilter: 'blur(20px)',
                         }}
                       >
-                        <video width="100%" autoPlay loop muted playsInline style={{ display: 'block' }}>
-                          <source src="/anushka_video.mp4" type="video/mp4" />
-                        </video>
-
+                        <Image
+                          src="/anushka-video-poster.webp"
+                          alt="Preview of the MedInternia learning dashboard"
+                          width={900}
+                          height={506}
+                          priority
+                          sizes="(max-width: 900px) 100vw, 50vw"
+                          style={{
+                            display: "block",
+                            width: "100%",
+                            height: "auto",
+                            aspectRatio: "16 / 9",
+                            objectFit: "cover",
+                          }}
+                        />
                         {!shouldReduceMotion && (
                           <motion.div
                             aria-hidden="true"

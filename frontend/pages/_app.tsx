@@ -1,37 +1,48 @@
-import type { AppProps } from 'next/app';
-import { ReactNode, useEffect } from 'react';
-import { CssBaseline, Snackbar, Alert, Typography } from '@mui/material';
-import { useNotifications } from '../hooks/useNotifications';
-import { AuthProvider, useAuth } from '../context/AuthContext';
-import { CustomThemeProvider } from '../context/ThemeContext';
-import ErrorBoundary from '../components/ErrorBoundary';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
-import { useRouter } from 'next/router';
-import '../styles/globals.css';
-import Head from 'next/head';
-import Chatbot from '../components/Chatbot';
-import '../i18n';
+import type { AppProps } from "next/app";
+import { ReactNode, useEffect, useState } from "react";
+import { CssBaseline, Snackbar, Alert, Typography } from "@mui/material";
+import { useNotifications } from "../hooks/useNotifications";
+import { AuthProvider, useAuth } from "../context/AuthContext";
+import { CustomThemeProvider } from "../context/ThemeContext";
+import ErrorBoundary from "../components/ErrorBoundary";
+import Navbar from "../components/Navbar";
+import Footer from "../components/Footer";
+import { useRouter } from "next/router";
+import "../styles/globals.css";
+import Head from "next/head";
+import dynamic from "next/dynamic";
+import { Inter } from "next/font/google";
+import "../i18n";
+
+const Chatbot = dynamic(() => import("../components/Chatbot"), {
+  ssr: false,
+  loading: () => null,
+});
+
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+});
 
 const PUBLIC_ROUTES = [
-  '/',
-  '/landing',
-  '/about',
-  '/contact',
-  '/faq',
-  '/privacy',
-  '/terms',
-  '/jobs',
-  '/auth/login',
-  '/auth/register',
-  '/auth/forgot-password',
-  '/auth/change-password',
-  '/404',
+  "/",
+  "/landing",
+  "/about",
+  "/contact",
+  "/faq",
+  "/privacy",
+  "/terms",
+  "/jobs",
+  "/auth/login",
+  "/auth/register",
+  "/auth/forgot-password",
+  "/auth/change-password",
+  "/404",
 ];
 
 function isPublicRoute(pathname: string) {
   return PUBLIC_ROUTES.some(
-    (route) => pathname === route || pathname.startsWith(`${route}/`)
+    (route) => pathname === route || pathname.startsWith(`${route}/`),
   );
 }
 
@@ -42,8 +53,11 @@ function AuthGate({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (publicRoute || isLoading) return;
+
     if (!isAuthenticated) {
-      router.replace(`/auth/login?redirect=${encodeURIComponent(router.asPath)}`);
+      router.replace(
+        `/auth/login?redirect=${encodeURIComponent(router.asPath)}`,
+      );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [publicRoute, isLoading, isAuthenticated, router.pathname]);
@@ -56,15 +70,25 @@ function AuthGate({ children }: { children: ReactNode }) {
 function MyApp({ Component, pageProps }: AppProps) {
   const router = useRouter();
   const { newToast, clearToast } = useNotifications();
-  const hideNavbarRoutes = ['/', '/contact', '/auth/login', '/auth/register'];
+  const [showChatbot, setShowChatbot] = useState(false);
+
+  const hideNavbarRoutes = ["/", "/contact", "/auth/login", "/auth/register"];
   const showNavbar = !hideNavbarRoutes.includes(router.pathname);
   const hideFooterRoutes = [
-    '/auth/login',
-    '/auth/register',
-    '/auth/change-password',
-    '/auth/forgot-password',
+    "/auth/login",
+    "/auth/register",
+    "/auth/change-password",
+    "/auth/forgot-password",
   ];
   const showFooter = !hideFooterRoutes.includes(router.pathname);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setShowChatbot(true);
+    }, 12000);
+
+    return () => window.clearTimeout(timer);
+  }, []);
 
   return (
     <ErrorBoundary>
@@ -74,45 +98,55 @@ function MyApp({ Component, pageProps }: AppProps) {
             <title>MedInternia</title>
             <link rel="icon" type="image/x-icon" href="/favicon.ico" />
             <link rel="shortcut icon" href="/favicon.ico" />
-            <link rel="preconnect" href="https://fonts.googleapis.com" />
-            <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-            <link
-              href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
-              rel="stylesheet"
-            />
 
             {/* --- PWA META TAGS --- */}
             <link rel="manifest" href="/manifest.json" />
             <meta name="theme-color" content="#000000" />
             <meta name="apple-mobile-web-app-capable" content="yes" />
-            <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+            <meta
+              name="apple-mobile-web-app-status-bar-style"
+              content="default"
+            />
             <meta name="apple-mobile-web-app-title" content="MedInternia" />
             <link rel="apple-touch-icon" href="/icon-192x192.png" />
-            {/* -------------------------------- */}
           </Head>
 
-          <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', overflowX: 'hidden', maxWidth: '100%' }}>
+          <div
+            className={inter.className}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              minHeight: "100vh",
+              overflowX: "hidden",
+              maxWidth: "100%",
+            }}
+          >
             <CssBaseline />
+
             {showNavbar && <Navbar route={router.pathname} />}
+
             <div
               style={{
                 flex: 1,
-                display: 'flex',
-                flexDirection: 'column',
+                display: "flex",
+                flexDirection: "column",
               }}
             >
               <AuthGate>
                 <Component {...pageProps} />
               </AuthGate>
             </div>
+
             {showFooter && <Footer />}
-            <Chatbot />
+            {showChatbot && router.pathname !== "/" && router.pathname !== "/landing" && (
+              <Chatbot />
+            )}
 
             <Snackbar
               open={!!newToast}
               autoHideDuration={4000}
               onClose={clearToast}
-              anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+              anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
             >
               <Alert
                 onClose={clearToast}
@@ -123,11 +157,11 @@ function MyApp({ Component, pageProps }: AppProps) {
                   clearToast();
                 }}
                 sx={{
-                  cursor: newToast?.link ? 'pointer' : 'default',
+                  cursor: newToast?.link ? "pointer" : "default",
                   background: (theme: any) => theme.custom.navbarGradient,
-                  color: 'white',
+                  color: "white",
                   minWidth: 280,
-                  '& .MuiAlert-icon': { color: 'white' },
+                  "& .MuiAlert-icon": { color: "white" },
                 }}
               >
                 <Typography variant="body2" fontWeight={600}>

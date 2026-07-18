@@ -1,5 +1,12 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import api from '../utils/api';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  ReactNode,
+} from "react";
+import api from "../utils/api";
 
 interface AuthContextType {
   token: string | null;
@@ -14,7 +21,9 @@ interface AuthContextType {
 
 let _globalToken: string | null = null;
 
-export const setGlobalToken = (t: string | null) => { _globalToken = t; };
+export const setGlobalToken = (t: string | null) => {
+  _globalToken = t;
+};
 export const getGlobalToken = () => _globalToken;
 
 const AuthContext = createContext<AuthContextType>({
@@ -30,14 +39,16 @@ const AuthContext = createContext<AuthContextType>({
 
 export const useAuth = () => useContext(AuthContext);
 
-export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: ReactNode }> = ({
+  children,
+}) => {
   const [token, setToken] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [user, setUser] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (typeof window === 'undefined') {
+    if (typeof window === "undefined") {
       setIsLoading(false);
       return;
     }
@@ -47,21 +58,32 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // load/refresh, so the very first API call (validate-token) goes
     // out with no Authorization header and fails even though a valid
     // token exists in localStorage.
-    const storedToken = localStorage.getItem('token');
-    if (storedToken) {
-      setToken(storedToken);
-      setGlobalToken(storedToken);
+    const storedToken = localStorage.getItem("token");
+
+    if (!storedToken) {
+      setToken(null);
+      setGlobalToken(null);
+      setUserId(null);
+      setUser(null);
+      localStorage.removeItem("userId");
+      localStorage.removeItem("user");
+      setIsLoading(false);
+      return;
     }
 
-    api.get('/auth/validate-token')
+    setToken(storedToken);
+    setGlobalToken(storedToken);
+
+    api
+      .get("/auth/validate-token")
       .then((res) => {
         const userData = res.data?.user || res.data?.data?.user;
         if (userData) {
           const id = String(userData._id || userData.id);
           setUserId(id);
           setUser(userData);
-          localStorage.setItem('userId', id);
-          localStorage.setItem('user', JSON.stringify(userData));
+          localStorage.setItem("userId", id);
+          localStorage.setItem("user", JSON.stringify(userData));
         }
       })
       .catch(() => {
@@ -70,52 +92,73 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // hanging onto a stale/bad token.
         setToken(null);
         setGlobalToken(null);
-        localStorage.removeItem('token');
+        localStorage.removeItem("token");
       })
       .finally(() => setIsLoading(false));
   }, []);
 
-  const login = useCallback((newToken: string, newUserId: string, newUser: any) => {
-    setToken(newToken);
-    setGlobalToken(newToken);
-    setUserId(newUserId);
-    setUser(newUser);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('token', newToken);
-      localStorage.setItem('userId', newUserId);
-      localStorage.setItem('user', JSON.stringify(newUser));
-    }
-  }, []);
+  const login = useCallback(
+    (newToken: string, newUserId: string, newUser: any) => {
+      setToken(newToken);
+      setGlobalToken(newToken);
+      setUserId(newUserId);
+      setUser(newUser);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("token", newToken);
+        localStorage.setItem("userId", newUserId);
+        localStorage.setItem("user", JSON.stringify(newUser));
+      }
+    },
+    [],
+  );
 
   const logout = useCallback(() => {
     setToken(null);
     setGlobalToken(null);
     setUserId(null);
     setUser(null);
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('token');
-      localStorage.removeItem('userId');
-      localStorage.removeItem('user');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('starredCases');
-      localStorage.removeItem('starredPapers');
-      localStorage.removeItem('pinnedPapers');
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("token");
+      localStorage.removeItem("userId");
+      localStorage.removeItem("user");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("starredCases");
+      localStorage.removeItem("starredPapers");
+      localStorage.removeItem("pinnedPapers");
       document.cookie = "token=; Path=/; Max-Age=0; SameSite=Lax";
       document.cookie = "auth_status=; Path=/; Max-Age=0; SameSite=Lax";
     }
   }, []);
 
   const refreshUser = useCallback(() => {
-    api.get('/auth/validate-token')
+    if (typeof window === "undefined") return;
+
+    const storedToken = localStorage.getItem("token");
+
+    if (!storedToken) {
+      setToken(null);
+      setGlobalToken(null);
+      setUserId(null);
+      setUser(null);
+      localStorage.removeItem("userId");
+      localStorage.removeItem("user");
+      return;
+    }
+
+    setToken(storedToken);
+    setGlobalToken(storedToken);
+
+    api
+      .get("/auth/validate-token")
       .then((res) => {
         const userData = res.data?.user || res.data?.data?.user;
         if (userData) {
           const id = String(userData._id || userData.id);
           setUserId(id);
           setUser(userData);
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('userId', id);
-            localStorage.setItem('user', JSON.stringify(userData));
+          if (typeof window !== "undefined") {
+            localStorage.setItem("userId", id);
+            localStorage.setItem("user", JSON.stringify(userData));
           }
         }
       })
