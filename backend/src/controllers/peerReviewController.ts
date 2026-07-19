@@ -45,6 +45,13 @@ export const submitPeerReview = async (req: AuthRequest, res: Response) => {
       });
     }
 
+    if (comment.author.toString() !== revieweeId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Reviewee must match the comment author'
+      });
+    }
+
     // Check if review already exists
     const existingReview = await PeerReview.findOne({
       reviewer: reviewerId,
