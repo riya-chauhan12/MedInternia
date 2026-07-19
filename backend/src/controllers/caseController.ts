@@ -1,7 +1,7 @@
-import mongoose, { ObjectId, Types } from "mongoose";
+import mongoose from "mongoose";
 import { createAndEmitNotification } from "./notificationController";
 import { Response } from "express";
-import Case, { ICase } from "../models/Case";
+import Case from "../models/Case";
 import User from "../models/User";
 import Rating from "../models/Rating";
 import Notification from "../models/Notification";
@@ -14,25 +14,12 @@ import {
 import { analyzeCase } from "../services/aiTaggerService";
 import { asyncHandler } from "../utils/asyncHandler";
 import { AppError } from "../utils/AppError";
-import { extractEntities } from "../services/nerService";
-import { extractSymptoms } from "../services/symptomExtractionService";
 import { uploadCaseAttachment } from "../utils/cloudinary";
 
-// Helper to normalize ID from params (handles string | string[])
 const getId = (id: string | string[]): string => Array.isArray(id) ? id[0] : id;
-const canModerateComments = (userType?: string) =>
-  ["admin", "doctor", "moderator"].includes(userType ?? "");
-const canAddCaseFollowUp = (userType?: string) =>
-  ["admin", "doctor", "intern", "hospital_staff"].includes(userType ?? "");
-const canModerateCases = (userType?: string) =>
-  ["admin", "doctor", "moderator"].includes(userType ?? "");
-
-const publicCaseFilter = {
-  $or: [
-    { moderationStatus: "approved" },
-    { moderationStatus: { $exists: false } },
-  ],
-};
+const canModerateComments = (userType?: string) => ["admin", "doctor", "moderator"].includes(userType ?? "");
+const canAddCaseFollowUp = (userType?: string) => ["admin", "doctor", "intern", "hospital_staff"].includes(userType ?? "");
+const canModerateCases = (userType?: string) => ["admin", "doctor", "moderator"].includes(userType ?? "");
 
 const CASE_UPDATABLE_FIELDS = [
   "title",
@@ -50,19 +37,66 @@ const CASE_UPDATABLE_FIELDS = [
   "verifiedDoctorsOnly",
 ] as const;
 
-// Get all approved cases
+// Get all approved cases with filtering capability
 export const getCases = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const cases = await Case.find(publicCaseFilter)
-    .populate("doctor", "firstName lastName specialization avatar medicalLicenseVerified")
-    .sort({ createdAt: -1 });
-  res.json({ success: true, data: { cases } });
+  const filter: any = {
+    isActive: { $ne: false },
+    $or: [
+      { moderationStatus: "approved" },
+      { moderationStatus: { $exists: false } },
+    ],
+  };
+
+  if (req.query.specialization) {
+    filter.specialization = { $regex: String(req.query.specialization), $options: "i" };
+  }
+  if (req.query.difficulty) {
+    filter.difficulty = req.query.difficulty;
+  }
+  if (req.query.isRareDisease !== undefined) {
+    filter.isRareDisease = String(req.query.isRareDisease) === "true";
+  }
+
+  const page = Math.max(1, parseInt(String(req.query.page ?? "1"), 10) || 1);
+  const limit = Math.max(1, parseInt(String(req.query.limit ?? "10"), 10) || 10);
+  const skip = (page - 1) * limit;
+
+  const [cases, total] = await Promise.all([
+    Case.find(filter)
+      .populate("doctor", "firstName lastName specialization avatar medicalLicenseVerified")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit),
+    Case.countDocuments(filter),
+  ]);
+
+  res.json({
+    success: true,
+    data: {
+      cases,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    },
+  });
 });
 
 // Get a single case by ID
 export const getCaseById = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const baseFilter = {
+    isActive: { $ne: false },
+    $or: [
+      { moderationStatus: "approved" },
+      { moderationStatus: { $exists: false } },
+    ],
+  };
+
   const caseDoc = await Case.findOne({
     _id: getId(req.params.id),
-    ...publicCaseFilter,
+    ...baseFilter,
   })
     .populate("doctor", "firstName lastName specialization avatar medicalLicenseVerified")
     .populate("comments.author", "firstName lastName userType avatar medicalLicenseVerified")
@@ -85,9 +119,9 @@ export const updateCase = asyncHandler(async (req: AuthRequest, res: Response) =
     throw new AppError("Case not found", 404);
   }
   if ((caseDoc as any).doctor?.toString() !== user._id!.toString() && user.userType !== "admin") {
-    throw new AppError("You are not authorized to update this case", 403);
+    throw new AppError("You can only update your own cases", 403);
   }
-  
+
   const updates: any = {};
   for (const field of CASE_UPDATABLE_FIELDS) {
     if (req.body[field] !== undefined) {
@@ -97,14 +131,14 @@ export const updateCase = asyncHandler(async (req: AuthRequest, res: Response) =
 
   const updatedCase = await Case.findByIdAndUpdate(
     getId(req.params.id),
-    { $set: updates },
+    updates,
     { new: true, runValidators: true }
   ).populate("doctor", "firstName lastName specialization");
 
   res.json({ success: true, message: "Case updated successfully", data: { case: updatedCase } });
 });
 
-// Delete a case
+// Delete a case (soft delete)
 export const deleteCase = asyncHandler(async (req: AuthRequest, res: Response) => {
   const user = req.user;
   if (!user) {
@@ -115,9 +149,10 @@ export const deleteCase = asyncHandler(async (req: AuthRequest, res: Response) =
     throw new AppError("Case not found", 404);
   }
   if ((caseDoc as any).doctor?.toString() !== user._id!.toString() && user.userType !== "admin") {
-    throw new AppError("You are not authorized to delete this case", 403);
+    throw new AppError("You can only delete your own cases", 403);
   }
-  await Case.findByIdAndDelete(getId(req.params.id));
+
+  await Case.findByIdAndUpdate(getId(req.params.id), { isActive: false });
   res.json({ success: true, message: "Case deleted successfully" });
 });
 
@@ -127,7 +162,7 @@ export const getMyCases = asyncHandler(async (req: AuthRequest, res: Response) =
   if (!user) {
     throw new AppError("User not authenticated", 401);
   }
-  const cases = await Case.find({ doctor: user._id }).sort({ createdAt: -1 });
+  const cases = await Case.find({ doctor: user._id, isActive: { $ne: false } }).sort({ createdAt: -1 });
   res.json({ success: true, data: { cases } });
 });
 
@@ -169,10 +204,10 @@ export const toggleStar = asyncHandler(async (req: AuthRequest, res: Response) =
   if (!caseDoc) {
     throw new AppError("Case not found", 404);
   }
-  
+
   const userDoc = await User.findById(user._id);
   const savedCases = ((userDoc as any)?.savedCases || []) as any[];
-  const hasStarred = savedCases.some((id: any) => id.toString() === (caseDoc as any)._id?.toString()); 
+  const hasStarred = savedCases.some((id: any) => id.toString() === (caseDoc as any)._id?.toString());
 
   if (hasStarred) {
     await User.findByIdAndUpdate(user._id, { $pull: { savedCases: caseDoc._id } });
@@ -192,9 +227,16 @@ export const getStarredCases = asyncHandler(async (req: AuthRequest, res: Respon
   if (!user) {
     throw new AppError("User not authenticated", 401);
   }
+  const baseFilter = {
+    isActive: { $ne: false },
+    $or: [
+      { moderationStatus: "approved" },
+      { moderationStatus: { $exists: false } },
+    ],
+  };
   const userDoc = await User.findById(user._id).populate({
     path: "savedCases",
-    match: publicCaseFilter,
+    match: baseFilter,
     populate: { path: "doctor", select: "firstName lastName specialization avatar" },
   });
   res.json({ success: true, data: { cases: (userDoc as any)?.savedCases || [] } });
@@ -205,12 +247,19 @@ export const getLikedCases = asyncHandler(async (req: AuthRequest, res: Response
   if (!user) {
     throw new AppError("User not authenticated", 401);
   }
-  const cases = await Case.find({ likes: user._id, ...publicCaseFilter })
+  const baseFilter = {
+    isActive: { $ne: false },
+    $or: [
+      { moderationStatus: "approved" },
+      { moderationStatus: { $exists: false } },
+    ],
+  };
+  const cases = await Case.find({ likes: user._id, ...baseFilter })
     .populate("doctor", "firstName lastName specialization avatar");
   res.json({ success: true, data: { cases } });
 });
 
-// Add a regular text comment
+// Add comment (w/ notification & corrected error signature)
 export const addComment = asyncHandler(async (req: AuthRequest, res: Response) => {
   const user = req.user;
   const { content } = req.body;
@@ -223,6 +272,13 @@ export const addComment = asyncHandler(async (req: AuthRequest, res: Response) =
   const caseDoc = await Case.findById(getId(req.params.id));
   if (!caseDoc) {
     throw new AppError("Case not found", 404);
+  }
+
+  const alreadyExists = caseDoc.comments.some(
+    (c: any) => c.author.toString() === user._id!.toString() && c.content === content.trim()
+  );
+  if (alreadyExists) {
+    throw new AppError("Duplicate comment detected", 400);
   }
 
   const newComment = {
@@ -238,6 +294,18 @@ export const addComment = asyncHandler(async (req: AuthRequest, res: Response) =
 
   caseDoc.comments.push(newComment as any);
   await caseDoc.save();
+
+  const doctorField = (caseDoc as any).doctor;
+  const doctorId = doctorField?._id ? doctorField._id.toString() : doctorField?.toString();
+
+  if (doctorId) {
+    await createAndEmitNotification({
+      recipientId: doctorId,
+      type: "comment",
+      message: `${user.firstName || "Someone"} commented on your case.`,
+      link: `/cases/${caseDoc._id}`,
+    });
+  }
 
   res.status(201).json({ success: true, message: "Comment added", data: { comment: newComment } });
 });
@@ -348,11 +416,19 @@ export const getRecommendedCases = asyncHandler(async (req: AuthRequest, res: Re
   const user = req.user;
   if (!user) throw new AppError("User not authenticated", 401);
   const spec = (user as any).specialization || "General Medicine";
-  
+
+  const baseFilter = {
+    isActive: { $ne: false },
+    $or: [
+      { moderationStatus: "approved" },
+      { moderationStatus: { $exists: false } },
+    ],
+  };
+
   const cases = await Case.find({
     specialization: spec,
     doctor: { $ne: user._id },
-    ...publicCaseFilter
+    ...baseFilter
   }).limit(5);
 
   res.json({ success: true, data: { cases } });
@@ -381,7 +457,7 @@ export const moderateComment = asyncHandler(async (req: AuthRequest, res: Respon
     throw new AppError("Access denied", 403);
   }
   const { caseId, commentId } = req.params;
-  const { status } = req.body; // approved / rejected
+  const { status } = req.body;
 
   await Case.updateOne(
     { _id: getId(caseId), "comments._id": getId(commentId) },
@@ -458,10 +534,6 @@ export const getCaseFollowUps = asyncHandler(async (req: AuthRequest, res: Respo
   if (!caseDoc) throw new AppError("Case not found", 404);
   res.json({ success: true, data: { followUps: (caseDoc as any).followUps || [] } });
 });
-
-// =========================================================
-// PREVIOUS VERIFIED SUBSTRUCTURES FROM PRODUCTION WORKSPACE
-// =========================================================
 
 export const scheduleAICasePost = asyncHandler(
   async (req: AuthRequest, res: Response) => {
@@ -714,6 +786,7 @@ export const uploadAttachment = asyncHandler(
   }
 );
 
+// Create case
 export const createCase = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const user = req.user;
@@ -736,8 +809,11 @@ export const createCase = asyncHandler(
         doctor: user._id,
         isPatientCase: true,
         moderationStatus: "pending",
+        pointsAwarded: 5,
       });
       await newCase.save();
+      await User.findByIdAndUpdate(user._id, { $inc: { points: 5 } });
+
       return res.status(201).json({ success: true, data: { case: newCase } });
     }
 
@@ -752,9 +828,12 @@ export const createCase = asyncHandler(
       isPatientCase: false,
       specialization: spec,
       moderationStatus: "approved",
+      pointsAwarded: 10,
     });
 
     await newCase.save();
+    await User.findByIdAndUpdate(user._id, { $inc: { points: 10 } });
+
     res.status(201).json({ success: true, data: { case: newCase } });
   }
 );
