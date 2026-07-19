@@ -65,6 +65,7 @@ export default function Register() {
   const [showPassword, setShowPassword] = useState(false);
   // GSSoC: Loading state for submit button
   const [loading, setLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [confirmPasswordError, setConfirmPasswordError] = useState('');
@@ -254,7 +255,19 @@ export default function Register() {
     setVerifyingOtp(false);
   };
 
+  function getPasswordRequirements(password: string) {
+  return [
+    { label: 'At least 8 characters', met: password.length >= 8 },
+    { label: 'One uppercase letter', met: /[A-Z]/.test(password) },
+    { label: 'One lowercase letter', met: /[a-z]/.test(password) },
+    { label: 'One digit', met: /[0-9]/.test(password) },
+    { label: 'One special character', met: /[^A-Za-z0-9]/.test(password) },
+    ];
+  }
 
+  function isPasswordValid(password: string): boolean {
+    return getPasswordRequirements(password).every(r => r.met);
+  }
   const handleNext = (e: any) => {
     e.preventDefault();
     setError('');
@@ -268,6 +281,11 @@ export default function Register() {
       setError('Please verify your email address to proceed.');
       return;
     }
+    if (!isPasswordValid(form.password)) {
+      setPasswordError('Please meet all password requirements.');
+      return;
+    }
+    setPasswordError('');
     if (confirmPassword !== form.password) {
       setConfirmPasswordError('Passwords do not match');
       return;
@@ -560,7 +578,26 @@ export default function Register() {
                             </InputAdornment>
                           ),
                         }}
+                        error={Boolean(passwordError)}
                       />
+                      {form.password && (
+                        <Box sx={{ mt: -1, mb: 1, gridColumn: '1 / -1' }}>
+                          {getPasswordRequirements(form.password).map((req) => (
+                            <Box
+                              key={req.label}
+                              sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 0.5,
+                                fontSize: '0.75rem',
+                                color: req.met ? 'success.main' : 'text.secondary',
+                              }}
+                            >
+                              {req.met ? '✓' : '○'} {req.label}
+                            </Box>
+                          ))}
+                        </Box>
+                      )}
                       <TextField
                         label="Confirm Password"
                         type={showConfirmPassword ? 'text' : 'password'}
